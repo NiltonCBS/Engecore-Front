@@ -39,12 +39,12 @@ export default function ListarClientes() {
       setLoading(true);
       setErro("");
       
-      const response = await api.get("/clientes", { withCredentials: true });
+      const response = await api.get("/cliente/listar", { withCredentials: true });
       
       if (response.data.success) {
         // Mapear os dados do backend para o formato esperado pelo frontend
         const clientesMapeados = response.data.data.map(cliente => ({
-          id: cliente.idUsuario,
+          id: cliente.id,
           nome: cliente.nome,
           razaoSocial: cliente.usuarioJuridico?.razaoSocial || "",
           tipoCliente: cliente.tipoPessoa === "FISICA" ? "Pessoa Física" : "Pessoa Jurídica",
@@ -105,29 +105,48 @@ export default function ListarClientes() {
     return new Date(data).toLocaleDateString('pt-BR');
   };
 
-  const alternarStatus = async (id) => {
+ const alternarStatus = async (id) => {
   try {
-    const cliente = clientes.find(c => c.id === id);
-    const novoStatus = cliente.status === 'ativo' ? 'inativo' : 'ativo';
-    await api.put(`/clientes/${id}/status`, { status: novoStatus });
+    // 1. Faz a chamada PUT para o endpoint. 
+    // Note que não enviamos um corpo (payload), pois o backend já sabe como alternar o status.
+    const response = await api.put(`/usuarios/${id}/alterar-status`);
 
-    setClientes(prev =>
-      prev.map(c =>
-        c.id === id ? { ...c, status: novoStatus } : c
+    // 2. Extrai o novo status da resposta da API.
+    // Isso garante que o frontend sempre mostrará o que está salvo no banco de dados.
+    // Assumindo que a API responde com: { success: true, data: 'ATIVO' } ou similar.
+    const statusRetornadoPelaApi = response.data?.data; 
+    
+    if (!statusRetornadoPelaApi) {
+      // Lança um erro se a resposta da API não vier no formato esperado.
+      throw new Error("A API não retornou o novo status do cliente.");
+    }
+    
+    // 3. Converte o status para o formato usado no frontend (ex: 'ATIVO' -> 'ativo').
+    const novoStatus = statusRetornadoPelaApi.toLowerCase();
+
+    // 4. Atualiza a lista de clientes no estado do React.
+    setClientes(clientesAtuais =>
+      clientesAtuais.map(cliente =>
+        cliente.id === id ? { ...cliente, status: novoStatus } : cliente
       )
     );
 
+    // 5. Notifica o usuário sobre o sucesso da operação.
     alert(`Cliente ${novoStatus === 'ativo' ? 'ativado' : 'desativado'} com sucesso!`);
+
   } catch (error) {
-    console.error("Erro ao alterar status:", error);
-    alert("Erro ao alterar status: " + (error.response?.data?.message || "Tente novamente"));
+    // 6. Captura e exibe erros de forma clara para o usuário.
+    console.error("Erro ao alterar status do cliente:", error);
+    const mensagemDeErro = error.response?.data?.message || error.message || "Ocorreu um erro inesperado.";
+    alert(`Não foi possível alterar o status: ${mensagemDeErro}`);
   }
 };
 
   const excluirCliente = async (id) => {
     if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
       try {
-        await api.delete(`/clientes/${id}`, { withCredentials: true });
+        console.log("Excluindo cliente com ID:", id); // Debug
+        await api.delete(`/cliente/deletar/${id}`, { withCredentials: true });
         setClientes(prev => prev.filter(cliente => cliente.id !== id));
         alert("Cliente excluído com sucesso!");
       } catch (error) {
@@ -640,7 +659,7 @@ export default function ListarClientes() {
       )}
 
       {/* Modal de Edição */}
-      <ModalEditarCliente
+     <ModalEditarCliente
         cliente={clienteParaEdicao}
         isOpen={mostrarModalEdicao}
         onClose={fecharModalEdicao}

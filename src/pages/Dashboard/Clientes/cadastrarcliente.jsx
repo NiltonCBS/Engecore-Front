@@ -12,9 +12,7 @@ export default function CadastrarCliente() {
     tipoCliente: "",
     cpfCnpj: "",
     inscricaoEstadual: "",
-    inscricaoMunicipal: "",
     telefone: "",
-    celular: "",
     email: "",
     endereco: {
       rua: "",
@@ -35,37 +33,76 @@ export default function CadastrarCliente() {
     status: "ativo"
   });
 
-  const buscarCep = async (cep) => {
-  // Remove caracteres não numéricos
-  const numeros = cep.replace(/\D/g, '');
-  if (numeros.length !== 8) return; // CEP inválido
+  // NOVO: Função para buscar dados do CNPJ na API Minha Receita
+  const buscarCnpj = async (cnpj) => {
+    // Remove caracteres não numéricos
+    const numeros = cnpj.replace(/\D/g, '');
+    if (numeros.length !== 14) return; // Só busca se for um CNPJ completo
 
-  try {
-    const response = await fetch(`https://viacep.com.br/ws/${numeros}/json/`);
-    const data = await response.json();
-
-    if (data.erro) {
-      alert("CEP não encontrado");
-      return;
-    }
-
-    // Atualiza o estado do cliente com os dados retornados
-    setCliente(prev => ({
-      ...prev,
-      endereco: {
-        ...prev.endereco,
-        rua: data.logradouro || "",
-        bairro: data.bairro || "",
-        cidade: data.localidade || "",
-        estado: data.uf || "",
-        cep: formatarCep(data.cep || numeros) // já formata o CEP
+    try {
+      const response = await fetch(`https://minhareceita.org/${numeros}`);
+      
+      if (!response.ok) {
+        throw new Error('CNPJ não encontrado ou API indisponível.');
       }
-    }));
-  } catch (error) {
-    console.error("Erro ao buscar CEP:", error);
-    alert("Erro ao buscar CEP. Tente novamente.");
-  }
-};
+
+      const data = await response.json();
+
+      // Atualiza o estado do cliente com os dados retornados da API
+      setCliente(prev => ({
+        ...prev,
+        nome: data.nome_fantasia || "",
+        razaoSocial: data.razao_social || "",
+        email: data.email || prev.email, // Mantém o email digitado se a API não retornar
+        endereco: {
+          ...prev.endereco,
+          rua: data.logradouro || "",
+          numero: data.numero || "",
+          complemento: data.complemento || "",
+          bairro: data.bairro || "",
+          cidade: data.municipio || "",
+          estado: data.uf || "",
+          cep: formatarCep(data.cep || "")
+        }
+      }));
+
+    } catch (error) {
+      console.error("Erro ao buscar CNPJ:", error);
+      alert("Erro ao consultar o CNPJ. Verifique o número e tente novamente.");
+    }
+  };
+
+  const buscarCep = async (cep) => {
+    // Remove caracteres não numéricos
+    const numeros = cep.replace(/\D/g, '');
+    if (numeros.length !== 8) return; // CEP inválido
+
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${numeros}/json/`);
+      const data = await response.json();
+
+      if (data.erro) {
+        alert("CEP não encontrado");
+        return;
+      }
+
+      // Atualiza o estado do cliente com os dados retornados
+      setCliente(prev => ({
+        ...prev,
+        endereco: {
+          ...prev.endereco,
+          rua: data.logradouro || "",
+          bairro: data.bairro || "",
+          cidade: data.localidade || "",
+          estado: data.uf || "",
+          cep: formatarCep(data.cep || numeros) // já formata o CEP
+        }
+      }));
+    } catch (error) {
+      console.error("Erro ao buscar CEP:", error);
+      alert("Erro ao buscar CEP. Tente novamente.");
+    }
+  };
 
   const tiposCliente = [
     "Pessoa Física",
@@ -74,23 +111,14 @@ export default function CadastrarCliente() {
   ];
 
   const estados = [
-    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", 
-    "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", 
+    "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
+    "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
     "RS", "RO", "RR", "SC", "SP", "SE", "TO"
   ];
 
-  {/*
-  const vendedores = [
-    "João Silva",
-    "Maria Santos",
-    "Pedro Oliveira",
-    "Ana Costa",
-    "Carlos Ferreira"
-  ];*/}
-
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
+
     if (name.includes('endereco.')) {
       const campo = name.split('.')[1];
       setCliente(prev => ({
@@ -114,60 +142,52 @@ export default function CadastrarCliente() {
     }
   };
 
-const handleSubmit = async () => {
-  // Monta o payload
-  let payload = {
-  nome: cliente.nome,
-  email: cliente.email,
-  senha: "123456", // provisório
-  telefone: cliente.celular || cliente.telefone,
-  status: cliente.status === "ativo" ? "STATUS_ATIVO" : "STATUS_INATIVO",
-  role: "ROLE_CLIENTE", // 👈 ajustado
-  tipoPessoa: cliente.tipoCliente === "Pessoa Física" ? "FISICA" : "JURIDICA",
-  endereco: cliente.endereco
-};
-
-
-  if (cliente.tipoCliente === "Pessoa Física") {
-    payload.usuarioFisico = {
-      cpf: cliente.cpfCnpj,
-      rg: cliente.rg || "",
-      dataNascimento: cliente.dataNascimento || null
+  const handleSubmit = async () => {
+    // Monta o payload
+    let payload = {
+      nome: cliente.nome,
+      email: cliente.email,
+      senha: "123456", // provisório
+      telefone: cliente.telefone,
+      status: cliente.status === "ativo" ? "STATUS_ATIVO" : "STATUS_INATIVO",
+      role: "ROLE_CLIENTE", // 👈 ajustado
+      tipoPessoa: cliente.tipoCliente === "Pessoa Física" ? "FISICA" : "JURIDICA",
+      endereco: cliente.endereco
     };
-  } else {
-    payload.usuarioJuridico = {
-      cnpj: cliente.cpfCnpj,
-      razaoSocial: cliente.razaoSocial,
-      nomeFantasia: cliente.nome,
-      inscricaoEstadual: cliente.inscricaoEstadual
-    };
-  }
 
-  // Validações básicas
-  if (!cliente.nome || !cliente.cpfCnpj || !cliente.celular) {
-    alert("Por favor, preencha os campos obrigatórios.");
-    return;
-  }
+    if (cliente.tipoCliente === "Pessoa Física") {
+      payload.usuarioFisico = {
+        cpf: cliente.cpfCnpj,
+        rg: cliente.rg || "",
+        dataNascimento: cliente.dataNascimento || null
+      };
+    } else {
+      payload.usuarioJuridico = {
+        cnpj: cliente.cpfCnpj,
+        razaoSocial: cliente.razaoSocial,
+        nomeFantasia: cliente.nome,
+        inscricaoEstadual: cliente.inscricaoEstadual
+      };
+    }
 
-  try {
-    console.log("Enviando ao back:", payload);
+    // Validações básicas
+    if (!cliente.nome || !cliente.cpfCnpj || !cliente.telefone) {
+      alert("Por favor, preencha os campos obrigatórios.");
+      return;
+    }
 
-    const response = await api.post("/clientes", payload, { withCredentials: true });
+    try {
+      console.log("Enviando ao back:", payload);
+      const response = await api.post("/cliente/cadastrar", payload, { withCredentials: true });
+      alert("Cliente cadastrado com sucesso!");
+      console.log("Resposta do servidor:", response.data);
+      limparCampos();
+    } catch (error) {
+      console.error("Erro ao cadastrar cliente:", error.response?.data || error.message);
+      alert("Erro ao cadastrar cliente: " + (error.response?.data?.message || "Tente novamente."));
+    }
+  };
 
-
-
-    alert("Cliente cadastrado com sucesso!");
-    console.log("Resposta do servidor:", response.data);
-
-    limparCampos();
-  } catch (error) {
-    console.error("Erro ao cadastrar cliente:", error.response?.data || error.message);
-    alert("Erro ao cadastrar cliente: " + (error.response?.data?.message || "Tente novamente."));
-  }
-};
-
-
-  // Função para limpar os campos do formulário 
 
   const limparCampos = () => {
     setCliente({
@@ -176,9 +196,7 @@ const handleSubmit = async () => {
       tipoCliente: "",
       cpfCnpj: "",
       inscricaoEstadual: "",
-      inscricaoMunicipal: "",
       telefone: "",
-      celular: "",
       email: "",
       endereco: {
         rua: "",
@@ -201,14 +219,10 @@ const handleSubmit = async () => {
   };
 
   const formatarCpfCnpj = (valor) => {
-    // Remove caracteres não numéricos
     const numeros = valor.replace(/\D/g, '');
-    
     if (numeros.length <= 11) {
-      // Formato CPF: 000.000.000-00
       return numeros.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     } else {
-      // Formato CNPJ: 00.000.000/0000-00
       return numeros.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
     }
   };
@@ -217,6 +231,14 @@ const handleSubmit = async () => {
     const valor = e.target.value;
     const valorFormatado = formatarCpfCnpj(valor);
     setCliente(prev => ({ ...prev, cpfCnpj: valorFormatado }));
+  };
+
+  // NOVO: Handler para o evento onBlur do campo CNPJ
+  const handleCnpjBlur = (e) => {
+    // Apenas busca se for Pessoa Jurídica ou MEI
+    if (cliente.tipoCliente.includes("Jurídica") || cliente.tipoCliente.includes("MEI")) {
+      buscarCnpj(e.target.value);
+    }
   };
 
   const formatarTelefone = (valor) => {
@@ -234,33 +256,28 @@ const handleSubmit = async () => {
     setCliente(prev => ({ ...prev, telefone: valorFormatado }));
   };
 
-  const handleCelularChange = (e) => {
-    const valor = e.target.value;
-    const valorFormatado = formatarTelefone(valor);
-    setCliente(prev => ({ ...prev, celular: valorFormatado }));
-  };
-
   const formatarCep = (valor) => {
+    if (!valor) return "";
     const numeros = valor.replace(/\D/g, '');
+    if (numeros.length !== 8) return numeros;
     return numeros.replace(/(\d{5})(\d{3})/, '$1-$2');
   };
 
   const handleCepChange = (e) => {
-  const valor = e.target.value;
-  const valorFormatado = formatarCep(valor);
-  setCliente(prev => ({
-    ...prev,
-    endereco: {
-      ...prev.endereco,
-      cep: valorFormatado
-    }
-  }));
+    const valor = e.target.value;
+    const valorFormatado = formatarCep(valor);
+    setCliente(prev => ({
+      ...prev,
+      endereco: {
+        ...prev.endereco,
+        cep: valorFormatado
+      }
+    }));
 
-  // Busca CEP apenas quando completo (8 dígitos)
-  if (valor.replace(/\D/g, '').length === 8) {
-    buscarCep(valor);
-  }
-};
+    if (valor.replace(/\D/g, '').length === 8) {
+      buscarCep(valor);
+    }
+  };
 
 
   return (
@@ -320,13 +337,14 @@ const handleSubmit = async () => {
                       name="cpfCnpj"
                       value={cliente.cpfCnpj}
                       onChange={handleCpfCnpjChange}
+                      onBlur={handleCnpjBlur} // ALTERADO: Adicionado o evento onBlur
                       placeholder="000.000.000-00 ou 00.000.000/0000-00"
                       className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                       maxLength="18"
                     />
                   </div>
 
-                  {cliente.tipoCliente === "Pessoa Jurídica" && (
+                  {(cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") && (
                     <div className="md:col-span-2">
                       <label className="block text-gray-700 font-medium mb-2">Razão Social</label>
                       <input
@@ -340,7 +358,7 @@ const handleSubmit = async () => {
                     </div>
                   )}
 
-                  {cliente.tipoCliente === "Pessoa Jurídica" && (
+                  {(cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") && (
                     <>
                       <div>
                         <label className="block text-gray-700 font-medium mb-2">Inscrição Estadual</label>
@@ -350,18 +368,6 @@ const handleSubmit = async () => {
                           value={cliente.inscricaoEstadual}
                           onChange={handleChange}
                           placeholder="Inscrição Estadual"
-                          className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-gray-700 font-medium mb-2">Inscrição Municipal</label>
-                        <input
-                          type="text"
-                          name="inscricaoMunicipal"
-                          value={cliente.inscricaoMunicipal}
-                          onChange={handleChange}
-                          placeholder="Inscrição Municipal"
                           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                         />
                       </div>
@@ -375,7 +381,7 @@ const handleSubmit = async () => {
                 <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Contato</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2">Telefone </label>
+                    <label className="block text-gray-700 font-medium mb-2">Celular </label>
                     <input
                       type="text"
                       name="telefone"
@@ -386,21 +392,6 @@ const handleSubmit = async () => {
                       maxLength="15"
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Celular *</label>
-                    <input
-                      type="text"
-                      name="celular"
-                      value={cliente.celular}
-                      onChange={handleCelularChange}
-                      placeholder="(00) 00000-0000"
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                      maxLength="15"
-                      required
-                    />
-                  </div>
-
                   <div>
                     <label className="block text-gray-700 font-medium mb-2">E-mail</label>
                     <input
@@ -509,93 +500,6 @@ const handleSubmit = async () => {
                 </div>
               </div>
 
-              {/* Dados Comerciais 
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Dados Comerciais</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Limite de Crédito</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-3 text-gray-500">R$</span>
-                      <input
-                        type="number"
-                        name="dadosComerciais.limiteCredito"
-                        value={cliente.dadosComerciais.limiteCredito}
-                        onChange={handleChange}
-                        step="0.01"
-                        placeholder="0,00"
-                        className="w-full border border-gray-300 rounded-lg p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Prazo de Vencimento (dias)</label>
-                    <input
-                      type="number"
-                      name="dadosComerciais.prazoVencimento"
-                      value={cliente.dadosComerciais.prazoVencimento}
-                      onChange={handleChange}
-                      placeholder="30"
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Desconto Padrão (%)</label>
-                    <input
-                      type="number"
-                      name="dadosComerciais.desconto"
-                      value={cliente.dadosComerciais.desconto}
-                      onChange={handleChange}
-                      step="0.01"
-                      placeholder="0.00"
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Vendedor Responsável</label>
-                    <select
-                      name="dadosComerciais.vendedor"
-                      value={cliente.dadosComerciais.vendedor}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="">Selecione um vendedor</option>
-                      {vendedores.map(vendedor => (
-                        <option key={vendedor} value={vendedor}>{vendedor}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Status</label>
-                    <select
-                      name="status"
-                      value={cliente.status}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-gray-700 font-medium mb-2">Observações</label>
-                  <textarea
-                    name="dadosComerciais.observacoes"
-                    value={cliente.dadosComerciais.observacoes}
-                    onChange={handleChange}
-                    placeholder="Observações importantes sobre o cliente..."
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    rows="3"
-                  ></textarea>
-                </div>
-              </div>
-*/}
               {/* Botões de Ação */}
               <div className="flex gap-4 pt-6 border-t">
                 <button
