@@ -7,7 +7,8 @@ import {
 } from "@material-tailwind/react";
 import { Link, useNavigate } from "react-router-dom";
 import LogoEngecore from "/src/assets/images/engecore.svg";
-import authService from "../services/authService.jsx"; // Importe o serviço
+import { toast } from 'react-toastify';
+//import authService from "../services/authService.jsx"; // Importe o serviço
 
 export default function SingIn() {
   const [email, setEmail] = useState("");
@@ -20,11 +21,13 @@ export default function SingIn() {
     setError(""); // Limpa o erro anterior
 
     try {
-      await authService.login(email, senha);
+      //await authService.login(email, senha);
       // Se o login for bem-sucedido, redirecione para o dashboard
+      toast.success('Login realizado com sucesso!');
       navigate("/dashboard");
     } catch (err) {
       // Se houver um erro, exiba a mensagem
+      toast.error('Erro ao fazer login');
       setError(err.message);
     }
   };

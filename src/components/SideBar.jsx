@@ -7,6 +7,7 @@ export default function Sidebar() {
   const [isProdutosOpen, setIsProdutosOpen] = useState(false);
   const [isUsersOpen, setIsUsersOpen] = useState(false);
   const [isObrasOpen, setIsObrasOpen] = useState(false);
+  const [isMovimentacaoOpen, setIsMovimentacaoOpen] = useState(false);
 
   // Sempre que mudar de rota, verifica se está em /produtos
 useEffect(() => {
@@ -15,12 +16,17 @@ useEffect(() => {
   setIsProdutosOpen(path.startsWith('/produtos'));
   setIsUsersOpen(path.startsWith('/users'));
   setIsObrasOpen(path.startsWith('/obras'));
+  setIsMovimentacaoOpen(path.startsWith('/movimentacao'));
 }, [location.pathname]);
 
 
   const toggleProdutos = () => {
     setIsProdutosOpen(!isProdutosOpen);
   };
+
+  const toggleMovimentacao = () => {
+    setIsMovimentacaoOpen(!isMovimentacaoOpen);
+  }
 
   const toggleUsers = () => {
     setIsUsersOpen(!isUsersOpen);
@@ -209,19 +215,7 @@ useEffect(() => {
             </div>
           </div>
 
-          <NavLink
-            to="/orders"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-lg transition-colors group ${
-                isActive
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
-              }`
-            }
-          >
-            <i className="fas fa-shopping-cart mr-3 group-hover:text-white"></i>
-            Orders
-          </NavLink>
+          
 
           {/* Produtos com Dropdown */}
           <div>
@@ -305,8 +299,76 @@ useEffect(() => {
             </div>
           </div>
 
+          {/* Produtos com Dropdown */}
+          <div>
+            <button
+              type="button"
+              onClick={toggleMovimentacao}
+              className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+            >
+              <div className="flex items-center">
+                <i className="fas fa-box mr-3 group-hover:text-white"></i>
+                Movimentacao
+              </div>
+              <i
+                className={`fas fa-chevron-down transition-transform duration-200 ${
+                  isMovimentacaoOpen ? "rotate-180" : ""
+                }`}
+              ></i>
+            </button>
+
+            {/* Submenu */}
+            <div
+              className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${
+                isMovimentacaoOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <NavLink
+                to="/movimentacao/listar"
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
+                    isActive
+                      ? "bg-gray-600 text-white"
+                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
+                  }`
+                }
+              >
+                <i className="fas fa-list mr-3"></i>
+                Lista de Movimentação
+              </NavLink>
+
+              <NavLink
+                to="/movimentacao/adicionar"
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
+                    isActive
+                      ? "bg-gray-600 text-white"
+                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
+                  }`
+                }
+              >
+                <i className="fas fa-plus mr-3"></i>
+                Adicionar Movimentação
+              </NavLink>
+            </div>
+          </div>
+          
           <NavLink
-            to="/settings"
+            to="/orders"
+            className={({ isActive }) =>
+              `flex items-center px-4 py-3 rounded-lg transition-colors group ${
+                isActive
+                  ? "bg-gray-700 text-white"
+                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
+              }`
+            }
+          >
+            <i className="fas fa-shopping-cart mr-3 group-hover:text-white"></i>
+            Orders
+          </NavLink>
+
+          <NavLink
+            to="/configuracao"
             className={({ isActive }) =>
               `flex items-center px-4 py-3 rounded-lg transition-colors group ${
                 isActive
@@ -316,7 +378,7 @@ useEffect(() => {
             }
           >
             <i className="fas fa-cog mr-3 group-hover:text-white"></i>
-            Settings
+            Configurações
           </NavLink>
         </div>
       </nav>
