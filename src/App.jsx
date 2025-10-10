@@ -14,8 +14,13 @@ import ListarCliente from './pages/Dashboard/Clientes/listarcliente.jsx';
 import CadastrarObra from './pages/Dashboard/Obras/cadastrarobra.jsx';
 import ListarObra from './pages/Dashboard/Obras/listarobra.jsx';
 
-import CadastrarMovimentacao from './pages/Dashboard/Movimentacao/cadastrarMovimentacao.jsx';
-import ListarMovimentacoes from './pages/Dashboard/Movimentacao/listaMovimentacao.jsx';
+import CadastrarMovimentacaoFinanceira from './pages/Dashboard/Financeira/cadastrarMovimentacao.jsx';
+import ListarMovimentacoesFinanceira from './pages/Dashboard/Financeira/listaMovimentacao.jsx';
+import CadastrarMovimentacaoEstoque from './pages/Dashboard/Estoque/cadastrarMovimentacaoEstoque.jsx';
+import ListarMovimentacaoEstoque from './pages/Dashboard/Estoque/listarMovimentacaoEstoque.jsx';
+
+import CotacaoDeValores from './pages/Dashboard/Cotacoes/CotacaoDeValores.jsx';
+import MostrarCotacao from './pages/Dashboard/Cotacoes/MostrarCotacao.jsx';
 
 function App() {
 
@@ -46,8 +51,12 @@ function App() {
         <Route path="/users/listar" element={<ListarCliente />} />
         <Route path="/obras/adicionar" element={<CadastrarObra />} />
         <Route path="/obras/listar" element={<ListarObra />} />
-        <Route path="/movimentacao/adicionar" element={<CadastrarMovimentacao />} />
-        <Route path="/movimentacao/listar" element={<ListarMovimentacoes />} />
+        <Route path="/financeiro/adicionar" element={<CadastrarMovimentacaoFinanceira />} />
+        <Route path="/financeiro/listar" element={<ListarMovimentacoesFinanceira />} />
+        <Route path="/estoque/adicionar" element={<CadastrarMovimentacaoEstoque />} />
+        <Route path="/estoque/listar" element={<ListarMovimentacaoEstoque />} />
+        <Route path="/cotacoes" element={<CotacaoDeValores />} />
+        <Route path="/cotacoes/detalhes" element={<MostrarCotacao />} />
       </Routes>
     </BrowserRouter>
   )

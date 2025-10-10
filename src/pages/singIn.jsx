@@ -6,7 +6,7 @@ import {
   Typography,
 } from "@material-tailwind/react";
 import { Link, useNavigate } from "react-router-dom";
-import LogoEngecore from "/src/assets/images/engecore.svg";
+import LogoEngecore from "/src/assets/images/logo engecore amarela.svg";
 import { toast } from 'react-toastify';
 //import authService from "../services/authService.jsx"; // Importe o serviço
 
@@ -35,8 +35,8 @@ export default function SingIn() {
   return (
     <div className="flex flex-col md:flex-row min-h-screen">
       <div className="flex-1 flex items-center justify-center bg-black m-3 rounded-lg shadow-[16px_0px_15px_rgba(0,0,0,0.6)]">
-        <div className="w-full max-w-xs md:max-w-sm">
-          <img src={LogoEngecore} alt="Logo Engecore" className="w-full h-auto object-contain rounded-lg" />
+        <div className=" max-w-xs md:max-w-sm ">
+          <img src={LogoEngecore} alt="Logo Engecore" className="w-40 h-auto object-contain rounded-lg  " />
         </div>
       </div>
       {/* Formulário */}

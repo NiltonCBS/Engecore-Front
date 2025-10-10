@@ -8,7 +8,7 @@ import {
 
 import { Link } from "react-router-dom";
  
-import LogoEngecore from "/src/assets/images/engecore.svg";
+import LogoEngecore from "/src/assets/images/logo engecore amarela.svg";
  
 export default function SimpleRegistrationForm() {
   return (
@@ -105,8 +105,8 @@ export default function SimpleRegistrationForm() {
 
       {/* Logo */}
       <div className="flex-1 flex items-center justify-center bg-black m-3 rounded-lg">
-        <div className="w-full max-w-xs md:max-w-sm">
-          <img src={LogoEngecore} alt="Logo Engecore" className="w-full h-auto object-contain rounded-lg" />
+       <div className=" max-w-xs md:max-w-sm ">
+                 <img src={LogoEngecore} alt="Logo Engecore" className="w-40 h-auto object-contain rounded-lg  " />
         </div>
       </div>
     </div>

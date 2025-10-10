@@ -1,398 +1,236 @@
-import LogoEngecore from "/src/assets/images/engecore.svg";
+import LogoEngecore from "/src/assets/images/logo engecore branca.svg";
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
 
 export default function Sidebar() {
-  const location = useLocation();
-  const [isProdutosOpen, setIsProdutosOpen] = useState(false);
-  const [isUsersOpen, setIsUsersOpen] = useState(false);
-  const [isObrasOpen, setIsObrasOpen] = useState(false);
-  const [isMovimentacaoOpen, setIsMovimentacaoOpen] = useState(false);
+    const location = useLocation();
+    const [isProdutosOpen, setIsProdutosOpen] = useState(false);
+    const [isUsersOpen, setIsUsersOpen] = useState(false);
+    const [isObrasOpen, setIsObrasOpen] = useState(false);
+    // NOVO NOME E NOVO ESTADO
+    const [isEstoqueOpen, setIsEstoqueOpen] = useState(false);
+    const [isFinanceiroOpen, setIsFinanceiroOpen] = useState(false);
+    const [isCotacoesOpen, setIsCotacoesOpen] = useState(false);
 
-  // Sempre que mudar de rota, verifica se está em /produtos
-useEffect(() => {
-  const path = location.pathname;
+    useEffect(() => {
+        const path = location.pathname;
 
-  setIsProdutosOpen(path.startsWith('/produtos'));
-  setIsUsersOpen(path.startsWith('/users'));
-  setIsObrasOpen(path.startsWith('/obras'));
-  setIsMovimentacaoOpen(path.startsWith('/movimentacao'));
-}, [location.pathname]);
+        setIsProdutosOpen(path.startsWith('/produtos'));
+        setIsUsersOpen(path.startsWith('/users'));
+        setIsObrasOpen(path.startsWith('/obras'));
+        // LÓGICA SEPARADA
+        setIsEstoqueOpen(path.startsWith('/estoque'));
+        setIsFinanceiroOpen(path.startsWith('/financeiro'));
+        setIsCotacoesOpen(path.startsWith('/cotacoes'));
+    }, [location.pathname]);
+
+    const toggleProdutos = () => setIsProdutosOpen(!isProdutosOpen);
+    const toggleUsers = () => setIsUsersOpen(!isUsersOpen);
+    const toggleObras = () => setIsObrasOpen(!isObrasOpen);
+    const toggleCotacoes = () => setIsCotacoesOpen(!isCotacoesOpen);
+
+    // FUNÇÕES SEPARADAS
+    const toggleEstoque = () => setIsEstoqueOpen(!isEstoqueOpen);
+    const toggleFinanceiro = () => setIsFinanceiroOpen(!isFinanceiroOpen);
 
 
-  const toggleProdutos = () => {
-    setIsProdutosOpen(!isProdutosOpen);
-  };
-
-  const toggleMovimentacao = () => {
-    setIsMovimentacaoOpen(!isMovimentacaoOpen);
-  }
-
-  const toggleUsers = () => {
-    setIsUsersOpen(!isUsersOpen);
-  }
-
-  const toggleObras = () => {
-    setIsObrasOpen(!isObrasOpen);
-  }
-
-  return (
-    <div className="fixed inset-y-0 left-0 w-64 bg-black shadow-xl z-50 flex flex-col">
-      {/* Logo */}
-      <div className="flex items-center justify-center h-16 bg-cordes-blue">
-        <img
-          src={LogoEngecore}
-          alt="Logo Engecore"
-          className="w-36 h-auto object-contain rounded-lg mt-6"
-        />
-      </div>
-
-      {/* Navegação com scroll */}
-      <nav className="mt-8 px-4 flex-1 overflow-y-auto scrollbar-hide">
-        <div className="space-y-2">
-          <NavLink
-            to="/dashboard"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-lg transition-colors group ${
-                isActive
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
-              }`
-            }
-          >
-            <i className="fas fa-home mr-3 group-hover:text-white"></i>
-            Dashboard
-          </NavLink>
-
-          <div>
-            <button
-              type="button" 
-              onClick={toggleUsers}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              <div className="flex items-center">
-                <i className="fas fa-users mr-3 group-hover:text-white"></i>
-                Clientes
-              </div>
-              <i
-                className={`fas fa-chevron-down transition-transform duration-200 ${
-                  isUsersOpen ? "rotate-180" : ""
-                }`}
-              ></i>
-            </button>
-
-            {/* Submenu */}
-            <div
-              className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${
-                isUsersOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <NavLink
-                to="/users/listar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-list mr-3"></i>
-                Lista de Clientes
-              </NavLink>
-
-              <NavLink
-                to="/users/adicionar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-plus mr-3"></i>
-                Adicionar Cliente
-              </NavLink>
-            {/*  
-              <NavLink
-                to="/clientes/estoque"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-warehouse mr-3"></i>
-                Estoque
-              </NavLink>
-              */}
+    return (
+        <div className="fixed inset-y-0 left-0 w-64 bg-black shadow-xl z-50 flex flex-col">
+            {/* Logo */}
+            <div className="flex px-4 h-16 bg-cordes-blue">
+                <img
+                    src={LogoEngecore}
+                    alt="Logo Engecore"
+                    className="w-20 h-auto object-contain rounded-lg mt-6"
+                />
             </div>
-          </div>
 
-          {/* Produtos com Dropdown */}
-          <div>
-            <button
-              type="button"
-              onClick={toggleObras}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              <div className="flex items-center">
-                <i className="fas fa-clipboard mr-3 group-hover:text-white"></i>
-                Obras
-              </div>
-              <i
-                className={`fas fa-chevron-down transition-transform duration-200 ${
-                  isObrasOpen ? "rotate-180" : ""
-                }`}
-              ></i>
-            </button>
+            {/* Navegação com scroll */}
+            <nav className="mt-8 px-4 flex-1 overflow-y-auto scrollbar-hide">
+                <div className="space-y-2">
+                    <NavLink
+                        to="/dashboard"
+                        className={({ isActive }) =>
+                            `flex items-center px-4 py-3 rounded-lg transition-colors group ${isActive
+                                ? "bg-gray-700 text-white"
+                                : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                            }`
+                        }
+                    >
+                        <i className="fas fa-home mr-3 group-hover:text-white"></i>
+                        Dashboard
+                    </NavLink>
 
-            {/* Submenu */}
-            <div
-              className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${
-                isObrasOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <NavLink
-                to="/obras/listar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-list mr-3"></i>
-                Lista de Obras
-              </NavLink>
+                    {/* Menu Clientes */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleUsers}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-users mr-3 group-hover:text-white"></i>
+                                Clientes
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isUsersOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isUsersOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/users/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Clientes
+                            </NavLink>
+                            <NavLink to="/users/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Cliente
+                            </NavLink>
+                        </div>
+                    </div>
 
-              <NavLink
-                to="/obras/adicionar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-plus mr-3"></i>
-                Adicionar Obra
-              </NavLink>
+                    {/* Menu Obras */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleObras}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-building mr-3 group-hover:text-white"></i>
+                                Obras
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isObrasOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isObrasOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/obras/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Obras
+                            </NavLink>
+                            <NavLink to="/obras/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Obra
+                            </NavLink>
+                            <NavLink to="/obras/categorias" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-tags mr-3"></i>
+                                Categorias Obras
+                            </NavLink>
+                        </div>
+                    </div>
 
-              <NavLink
-                to="/obras/categorias"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-tags mr-3"></i>
-                Categorias Obras
-              </NavLink>
-            {/* 
-              <NavLink
-                to="/obras/estoque"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-warehouse mr-3"></i>
-                Estoque
-              </NavLink>
-            */}
+                    {/* Menu Produtos */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleProdutos}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-box mr-3 group-hover:text-white"></i>
+                                Produtos
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isProdutosOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isProdutosOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/produtos/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Produtos
+                            </NavLink>
+                            <NavLink to="/produtos/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Produto
+                            </NavLink>
+                            <NavLink to="/produtos/categorias" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-tags mr-3"></i>
+                                Categorias
+                            </NavLink>
+                        </div>
+                    </div>
+
+                    {/* Menu Estoque - CORRIGIDO */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleEstoque}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-boxes-stacked mr-3 group-hover:text-white"></i>
+                                Estoque
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isEstoqueOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isEstoqueOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/estoque/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Movimentações
+                            </NavLink>
+                            <NavLink to="/estoque/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Nova Movimentação
+                            </NavLink>
+                        </div>
+                    </div>
+                    
+                    {/* Menu Financeiro - CORRIGIDO */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleFinanceiro}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-brazilian-real-sign mr-3 group-hover:text-white"></i>
+                                Financeiro
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFinanceiroOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFinanceiroOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/financeiro/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lançamentos
+                            </NavLink>
+                            <NavLink to="/financeiro/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Novo Lançamento
+                            </NavLink>
+                        </div>
+                    </div>
+
+                    {/* Menu Cotações */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleCotacoes}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-comments-dollar mr-3 group-hover:text-white"></i>
+                                Cotações
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isCotacoesOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isCotacoesOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/cotacoes" end className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list-alt mr-3"></i>
+                                Lista / Nova Cotação
+                            </NavLink>
+                            <NavLink to="/cotacoes/detalhes" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-search-dollar mr-3"></i>
+                                Detalhes da Cotação
+                            </NavLink>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            {/* Usuário */}
+            <div className="p-4 bg-gray-800 flex-shrink-0">
+                <div className="flex items-center space-x-3">
+                    <i className="fas fa-user-circle text-white text-3xl"></i>
+                    <div>
+                        <p className="text-white text-sm font-medium">John Admin</p>
+                        <p className="text-gray-400 text-xs">Administrator</p>
+                    </div>
+                </div>
             </div>
-          </div>
-
-          
-
-          {/* Produtos com Dropdown */}
-          <div>
-            <button
-              type="button"
-              onClick={toggleProdutos}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              <div className="flex items-center">
-                <i className="fas fa-box mr-3 group-hover:text-white"></i>
-                Produtos
-              </div>
-              <i
-                className={`fas fa-chevron-down transition-transform duration-200 ${
-                  isProdutosOpen ? "rotate-180" : ""
-                }`}
-              ></i>
-            </button>
-
-            {/* Submenu */}
-            <div
-              className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${
-                isProdutosOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <NavLink
-                to="/produtos/listar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-list mr-3"></i>
-                Lista de Produtos
-              </NavLink>
-
-              <NavLink
-                to="/produtos/adicionar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-plus mr-3"></i>
-                Adicionar Produto
-              </NavLink>
-
-              <NavLink
-                to="/produtos/categorias"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-tags mr-3"></i>
-                Categorias
-              </NavLink>
-
-              <NavLink
-                to="/produtos/estoque"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-warehouse mr-3"></i>
-                Estoque
-              </NavLink>
-            </div>
-          </div>
-
-          {/* Produtos com Dropdown */}
-          <div>
-            <button
-              type="button"
-              onClick={toggleMovimentacao}
-              className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
-            >
-              <div className="flex items-center">
-                <i className="fas fa-box mr-3 group-hover:text-white"></i>
-                Movimentacao
-              </div>
-              <i
-                className={`fas fa-chevron-down transition-transform duration-200 ${
-                  isMovimentacaoOpen ? "rotate-180" : ""
-                }`}
-              ></i>
-            </button>
-
-            {/* Submenu */}
-            <div
-              className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${
-                isMovimentacaoOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <NavLink
-                to="/movimentacao/listar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-list mr-3"></i>
-                Lista de Movimentação
-              </NavLink>
-
-              <NavLink
-                to="/movimentacao/adicionar"
-                className={({ isActive }) =>
-                  `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${
-                    isActive
-                      ? "bg-gray-600 text-white"
-                      : "text-gray-400 hover:bg-gray-600 hover:text-white"
-                  }`
-                }
-              >
-                <i className="fas fa-plus mr-3"></i>
-                Adicionar Movimentação
-              </NavLink>
-            </div>
-          </div>
-          
-          <NavLink
-            to="/orders"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-lg transition-colors group ${
-                isActive
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
-              }`
-            }
-          >
-            <i className="fas fa-shopping-cart mr-3 group-hover:text-white"></i>
-            Orders
-          </NavLink>
-
-          <NavLink
-            to="/configuracao"
-            className={({ isActive }) =>
-              `flex items-center px-4 py-3 rounded-lg transition-colors group ${
-                isActive
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-300 hover:bg-gray-700 hover:text-white"
-              }`
-            }
-          >
-            <i className="fas fa-cog mr-3 group-hover:text-white"></i>
-            Configurações
-          </NavLink>
         </div>
-      </nav>
-
-      {/* Usuário */}
-      <div className="p-4 bg-gray-800 flex-shrink-0">
-        <div className="flex items-center space-x-3">
-          <i className="fas fa-user-circle text-white text-3xl"></i>
-          <div>
-            <p className="text-white text-sm font-medium">John Admin</p>
-            <p className="text-gray-400 text-xs">Administrator</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+    );
 }
