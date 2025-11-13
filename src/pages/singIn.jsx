@@ -8,7 +8,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import LogoEngecore from "/src/assets/images/logo engecore amarela.svg";
 import { toast } from 'react-toastify';
-//import authService from "../services/authService.jsx"; // Importe o serviço
+import authService from "../services/authService.jsx"; // Importe o serviço
 
 export default function SingIn() {
   const [email, setEmail] = useState("");
@@ -21,7 +21,7 @@ export default function SingIn() {
     setError(""); // Limpa o erro anterior
 
     try {
-      //await authService.login(email, senha);
+      await authService.login(email, senha);
       // Se o login for bem-sucedido, redirecione para o dashboard
       toast.success('Login realizado com sucesso!');
       navigate("/dashboard");
@@ -88,12 +88,6 @@ export default function SingIn() {
             <Button className="mt-6 text-yellow-900" fullWidth type="submit">
               Entrar
             </Button>
-            <Typography color="gray" className="mt-4 text-center font-normal">
-              Não tem uma conta?{" "}
-              <Link to="/register" className="font-medium text-gray-900 hover:text-yellow-900 underline">
-                Cadastre-se
-              </Link>
-            </Typography>
           </form>
         </Card>
       </div>

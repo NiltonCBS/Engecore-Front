@@ -10,7 +10,7 @@ export default function StatCard({ title, value, icon, percent, color }) {
               <i className="fas fa-arrow-up mr-1"></i>
               {percent}
             </span>
-            <span className="text-gray-500 text-sm ml-2">vs mês passado</span>
+            <span className="text-gray-500 text-sm ml-2"></span>
           </div>
         </div>
         <div className={`w-12 h-12 ${color} rounded-lg flex items-center justify-center`}>

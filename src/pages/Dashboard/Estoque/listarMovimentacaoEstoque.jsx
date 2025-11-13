@@ -67,6 +67,7 @@ export default function ListarMovimentacaoEstoque() {
             toast.success("Movimentação atualizada com sucesso!");
         } catch (error) {
             toast.error("Erro ao atualizar a movimentação.");
+            console.error("Erro ao atualizar movimentação:", error);
         } finally {
             setModalAberto(false);
         }
@@ -92,6 +93,7 @@ export default function ListarMovimentacaoEstoque() {
             setMovimentacoes(movs => movs.filter(m => m.id !== id));
             toast.success("Movimentação deletada com sucesso!");
         } catch(error) {
+            console.error("Erro ao deletar movimentação:", error); 
             toast.error("Erro ao deletar a movimentação.");
         } finally {
             toast.dismiss();

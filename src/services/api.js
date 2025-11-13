@@ -5,24 +5,31 @@ import Cookies from 'js-cookie';
 const api = axios.create({
   baseURL: 'http://localhost:8080', // Certifique-se que esta é a porta correta
   withCredentials: true, // Essencial para o envio de cookies em pedidos cross-origin
+   headers: {
+    'Content-Type': 'application/json',
+  }
 });
 
 // 2. Intercetor de Pedidos: A magia acontece aqui
 // Este código é executado ANTES de cada pedido da API ser enviado
 api.interceptors.request.use(
   (config) => {
-    // Tenta obter o token do cookie chamado 'JWT_TOKEN'
-    const token = Cookies.get('JWT_TOKEN'); 
-
-    // Se o token existir, adiciona-o ao cabeçalho Authorization
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    return config; // Retorna a configuração modificada para o Axios continuar o pedido
+    // Cookie é enviado automaticamente pelo withCredentials
+    return config;
   },
   (error) => {
-    // Em caso de erro na configuração do pedido, rejeita a promessa
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor de resposta
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      Cookies.remove('JWT_TOKEN', { path: '/' });
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

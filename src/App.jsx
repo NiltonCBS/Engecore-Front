@@ -1,6 +1,7 @@
 import './App.css'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ToastContainer } from 'react-toastify';
+
 import "@fortawesome/fontawesome-free/css/all.min.css";
 import SingUp from "./pages/singup.jsx";
 import SingIn from "./pages/singIn.jsx";
