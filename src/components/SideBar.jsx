@@ -1,9 +1,13 @@
 import LogoEngecore from "/src/assets/images/logo engecore branca.svg";
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import authService from "../services/authService";
+import { toast } from 'react-toastify'; 
 
 export default function Sidebar() {
     const location = useLocation();
+    const navigate = useNavigate();
     const [isProdutosOpen, setIsProdutosOpen] = useState(false);
     const [isUsersOpen, setIsUsersOpen] = useState(false);
     const [isObrasOpen, setIsObrasOpen] = useState(false);
@@ -33,6 +37,15 @@ export default function Sidebar() {
     const toggleEstoque = () => setIsEstoqueOpen(!isEstoqueOpen);
     const toggleFinanceiro = () => setIsFinanceiroOpen(!isFinanceiroOpen);
 
+const handleLogout = async () => {
+        try {
+            await authService.logout();
+            toast.success("Logout realizado com sucesso!");
+            navigate("/"); // Redireciona para a tela de login
+        } catch (error) {
+            toast.error("Erro ao fazer logout.");
+        }
+    };
 
     return (
         <div className="fixed inset-y-0 left-0 w-64 bg-black shadow-xl z-50 flex flex-col">
@@ -221,7 +234,6 @@ export default function Sidebar() {
                 </div>
             </nav>
 
-            {/* Usuário */}
             <div className="p-4 bg-gray-800 flex-shrink-0">
                 <div className="flex items-center space-x-3">
                     <i className="fas fa-user-circle text-white text-3xl"></i>
@@ -230,6 +242,15 @@ export default function Sidebar() {
                         <p className="text-gray-400 text-xs">Administrator</p>
                     </div>
                 </div>
+
+                {/* 3. Adicionar o botão aqui */}
+                <button
+                    onClick={handleLogout}
+                    className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors group text-gray-300 hover:bg-red-700 hover:text-white"
+                >
+                    <i className="fas fa-sign-out-alt"></i>
+                    Sair
+                </button>
             </div>
         </div>
     );

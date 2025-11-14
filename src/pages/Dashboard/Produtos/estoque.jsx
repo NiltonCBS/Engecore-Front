@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
+import { toast } from 'react-toastify';
 
 export default function ControleEstoque() {
   const [produtos, setProdutos] = useState([
@@ -149,7 +150,7 @@ export default function ControleEstoque() {
 
   const handleMovimentacao = () => {
     if (!novaMovimentacao.produtoId || !novaMovimentacao.quantidade || !novaMovimentacao.motivo) {
-      alert("Preencha todos os campos obrigatórios!");
+      toast.info("Preencha todos os campos obrigatórios!");
       return;
     }
 
@@ -157,7 +158,7 @@ export default function ControleEstoque() {
     const quantidade = parseInt(novaMovimentacao.quantidade);
     
     if (novaMovimentacao.tipo === "saida" && produto.estoque < quantidade) {
-      alert("Quantidade insuficiente em estoque!");
+      toast.error("Quantidade insuficiente em estoque!");
       return;
     }
 

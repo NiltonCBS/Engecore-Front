@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
+import { toast } from 'react-toastify';
 import { api } from "../../../services/api"; // ajuste o caminho certo para seu api.js
 
 
@@ -68,7 +69,7 @@ export default function CadastrarCliente() {
 
     } catch (error) {
       console.error("Erro ao buscar CNPJ:", error);
-      alert("Erro ao consultar o CNPJ. Verifique o número e tente novamente.");
+      toast.error("Erro ao consultar o CNPJ. Verifique o número e tente novamente.");
     }
   };
 
@@ -82,7 +83,7 @@ export default function CadastrarCliente() {
       const data = await response.json();
 
       if (data.erro) {
-        alert("CEP não encontrado");
+        toast.error("CEP não encontrado");
         return;
       }
 
@@ -100,7 +101,7 @@ export default function CadastrarCliente() {
       }));
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
-      alert("Erro ao buscar CEP. Tente novamente.");
+      toast.error("Erro ao buscar CEP. Tente novamente.");
     }
   };
 
@@ -172,14 +173,13 @@ export default function CadastrarCliente() {
 
     // Validações básicas
     if (!cliente.nome || !cliente.cpfCnpj || !cliente.telefone) {
-      alert("Por favor, preencha os campos obrigatórios.");
+      toast.warn("Por favor, preencha os campos obrigatórios.");
       return;
     }
 
     try {
-      console.log("Enviando ao back:", payload);
       const response = await api.post("/cliente/cadastrar", payload, { withCredentials: true });
-      alert("Cliente cadastrado com sucesso!");
+       toast.success("Cliente cadastrado com sucesso!");
       console.log("Resposta do servidor:", response.data);
       limparCampos();
     } catch (error) {

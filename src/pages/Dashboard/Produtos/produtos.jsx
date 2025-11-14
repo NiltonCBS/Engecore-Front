@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
+import { toast } from 'react-toastify';
 
 export default function Produtos() {
   const [produto, setProduto] = useState({
@@ -69,7 +70,7 @@ export default function Produtos() {
 
   const handleSubmit = () => {
     console.log("Produto cadastrado:", produto);
-    alert("Produto cadastrado com sucesso!");
+    toast.success("Produto cadastrado com sucesso!");
     setProduto({
       nome: "",
       categoria: "",

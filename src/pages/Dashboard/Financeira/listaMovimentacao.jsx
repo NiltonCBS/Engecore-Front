@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
 import ModalEditarMovimentacao from "./modalMovimentacao";
+import { toast } from "react-toastify";
 
 export default function ListarMovimentacoes() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -97,13 +98,13 @@ export default function ListarMovimentacoes() {
       m.idMovFin === movimentacaoEditada.idMovFin ? movimentacaoEditada : m
     ));
     setModalAberto(false);
-    alert("Movimentação atualizada com sucesso!");
+    toast.success("Movimentação atualizada com sucesso!");
   };
 
   const handleDeletar = (id) => {
     if (window.confirm("Tem certeza que deseja deletar esta movimentação?")) {
       setMovimentacoes(movimentacoes.filter(m => m.idMovFin !== id));
-      alert("Movimentação deletada com sucesso!");
+      toast.success("Movimentação deletada com sucesso!");
     }
   };
 
@@ -297,7 +298,7 @@ export default function ListarMovimentacoes() {
                               <i className="fas fa-trash text-lg"></i>
                             </button>
                             <button
-                              onClick={() => alert(`Detalhes da movimentação #${movimentacao.idMovFin}`)}
+                              onClick={() => toast.info(`Detalhes da movimentação #${movimentacao.idMovFin}`)}
                               className="text-gray-600 hover:text-gray-800 transition"
                               title="Ver Detalhes"
                             >

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 
 // Mock da API para demonstração, já que o caminho do arquivo original não pôde ser resolvido.
 // Em um ambiente de produção real, você usaria a importação correta do seu arquivo de serviços.
@@ -295,7 +296,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
 
       onClienteAtualizado(clienteAtualizado);
       onClose();
-      alert("Cliente atualizado com sucesso!");
+      toast.success("Cliente atualizado com sucesso!");
       
     } catch (error) {
       console.error("Erro ao atualizar cliente:", error);

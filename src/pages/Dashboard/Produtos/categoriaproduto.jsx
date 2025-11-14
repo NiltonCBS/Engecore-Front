@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
+import { toast } from "react-toastify";
 
 export default function GerenciarCategorias() {
   const [categorias, setCategorias] = useState([
@@ -66,7 +67,7 @@ export default function GerenciarCategorias() {
 
   const handleSalvar = () => {
     if (!novaCategoria.nome.trim()) {
-      alert("Nome da categoria é obrigatório!");
+      toast.info("Nome da categoria é obrigatório!");
       return;
     }
 
@@ -90,7 +91,7 @@ export default function GerenciarCategorias() {
 
   const handleExcluir = (categoria) => {
     if (categoria.produtosCount > 0) {
-      alert(`Não é possível excluir a categoria "${categoria.nome}" pois ela possui ${categoria.produtosCount} produto(s) associado(s).`);
+      toast.error(`Não é possível excluir a categoria "${categoria.nome}" pois ela possui ${categoria.produtosCount} produto(s) associado(s).`);
       return;
     }
 
@@ -101,7 +102,7 @@ export default function GerenciarCategorias() {
 
   const handleToggleStatus = (categoria) => {
     if (!categoria.ativo && categoria.produtosCount > 0) {
-      alert(`Não é possível desativar a categoria "${categoria.nome}" pois ela possui ${categoria.produtosCount} produto(s) associado(s).`);
+      toast.error(`Não é possível desativar a categoria "${categoria.nome}" pois ela possui ${categoria.produtosCount} produto(s) associado(s).`);
       return;
     }
 

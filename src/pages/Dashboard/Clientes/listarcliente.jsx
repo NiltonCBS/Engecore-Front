@@ -4,6 +4,7 @@ import Header from "../../../components/Header";
 import { NavLink } from "react-router-dom";
 import { api } from "../../../services/api";
 import ModalEditarCliente from "./modalcliente";
+import { toast } from 'react-toastify';
 
 export default function ListarClientes() {
   const [clientes, setClientes] = useState([]);
@@ -132,13 +133,13 @@ export default function ListarClientes() {
     );
 
     // 5. Notifica o usuário sobre o sucesso da operação.
-    alert(`Cliente ${novoStatus === 'ativo' ? 'ativado' : 'desativado'} com sucesso!`);
+     toast.success(`Cliente ${novoStatus === 'ativo' ? 'ativado' : 'desativado'} com sucesso!`);
 
   } catch (error) {
     // 6. Captura e exibe erros de forma clara para o usuário.
     console.error("Erro ao alterar status do cliente:", error);
     const mensagemDeErro = error.response?.data?.message || error.message || "Ocorreu um erro inesperado.";
-    alert(`Não foi possível alterar o status: ${mensagemDeErro}`);
+    toast.error(`Não foi possível alterar o status: ${mensagemDeErro}`);
   }
 };
 
@@ -148,10 +149,10 @@ export default function ListarClientes() {
         console.log("Excluindo cliente com ID:", id); // Debug
         await api.delete(`/cliente/deletar/${id}`, { withCredentials: true });
         setClientes(prev => prev.filter(cliente => cliente.id !== id));
-        alert("Cliente excluído com sucesso!");
+        toast.success("Cliente excluído com sucesso!");
       } catch (error) {
         console.error("Erro ao excluir cliente:", error);
-        alert("Erro ao excluir cliente: " + (error.response?.data?.message || "Tente novamente"));
+        toast.error("Erro ao excluir cliente: " + (error.response?.data?.message || "Tente novamente"));
       }
     }
   };

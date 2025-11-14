@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
+import { toast } from 'react-toastify';
 
 export default function CadastrarMovimentacao() {
   const [movimentacao, setMovimentacao] = useState({
@@ -65,12 +66,12 @@ export default function CadastrarMovimentacao() {
   const handleSubmit = () => {
     // Validações básicas
     if (!movimentacao.valor || !movimentacao.tipo || !movimentacao.categoriaFinanceira || !movimentacao.data) {
-      alert("Por favor, preencha os campos obrigatórios.");
+       toast.warn("Por favor, preencha os campos obrigatórios.");
       return;
     }
 
     console.log("Movimentação cadastrada:", movimentacao);
-    alert("Movimentação cadastrada com sucesso!");
+    toast.success("Movimentação cadastrada com sucesso!");
     limparCampos();
   };
 

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 
 export default function ModalEditarMovimentacao({ movimentacao, onClose, onSave }) {
   const [formData, setFormData] = useState({
@@ -71,7 +72,7 @@ export default function ModalEditarMovimentacao({ movimentacao, onClose, onSave 
     e.preventDefault();
     
     if (!formData.valor || !formData.tipo || !formData.categoriaFinanceira || !formData.data) {
-      alert("Por favor, preencha os campos obrigatórios.");
+     toast.warn("Por favor, preencha os campos obrigatórios.");
       return;
     }
 
