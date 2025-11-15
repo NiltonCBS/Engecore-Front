@@ -1,20 +1,15 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import { api } from '../../../services/api';
+import Sidebar from '../../../components/SideBar';
+import Header from '../../../components/Header';
+import ModalEditarMovEstoque from '../../../components/ModalEditarMovEstoque';
 
-// Caminhos ajustados para a estrutura correta de pastas
-import Sidebar from "../../../components/SideBar";
-import Header from "../../../components/Header";
-import ModalEditarMovEstoque from "../../../components/ModalEditarMovEstoque"; // Modal para edição
-
-// Supondo que você tenha um serviço de API
-// import api from "../../../services/api";
-
-const TIPOS_MOVIMENTACAO = ["ENTRADA", "SAIDA", "TRANSFERENCIA", "AJUSTE"];
 
 export default function ListarMovimentacaoEstoque() {
     const [movimentacoes, setMovimentacoes] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
-    
+
     // Estados para filtros
     const [searchTerm, setSearchTerm] = useState("");
     const [filtroTipo, setFiltroTipo] = useState("");
@@ -23,33 +18,40 @@ export default function ListarMovimentacaoEstoque() {
     const [modalAberto, setModalAberto] = useState(false);
     const [movimentacaoSelecionada, setMovimentacaoSelecionada] = useState(null);
 
-    useEffect(() => {
-        const fetchMovimentacoes = async () => {
-            setIsLoading(true);
-            try {
-                // --- Substitua pela chamada real à sua API ---
-                // const response = await api.get('/movEstoque/listar');
-                // setMovimentacoes(response.data || []);
-                
-                // --- DADOS MOCKADOS (baseado no seu MovEstoqueResponse) ---
-                const mockData = [
-                    { id: 1, material: "Cimento Votoran CP II", estoqueOrigem: null, estoqueDestino: 1, quantidade: 100, tipoMov: "ENTRADA", dataMovimentacao: "2025-10-27", funcionarioResponsavel: 1 },
-                    { id: 2, material: "Tijolo Baiano 8 Furos", estoqueOrigem: 1, estoqueDestino: 2, quantidade: 500, tipoMov: "TRANSFERENCIA", dataMovimentacao: "2025-10-28", funcionarioResponsavel: 1 },
-                    { id: 3, material: "Cimento Votoran CP II", estoqueOrigem: 2, estoqueDestino: null, quantidade: 20, tipoMov: "SAIDA", dataMovimentacao: "2025-10-29", funcionarioResponsavel: 2 },
-                    { id: 4, material: "Areia Média (m³)", estoqueOrigem: 1, estoqueDestino: 1, quantidade: 15, tipoMov: "AJUSTE", dataMovimentacao: "2025-10-30", funcionarioResponsavel: 1 }
-                ];
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                setMovimentacoes(mockData);
-                // --------------------------------------------------
+    const TIPOS_MOVIMENTACAO = ["ENTRADA", "SAIDA", "TRANSFERENCIA", "AJUSTE"];
+    // PASSO 2: Criar a função de busca
+    const fetchMovimentacoes = async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.get('/movEstoque/listar', { withCredentials: true });
 
-            } catch (error) {
-                toast.error("Falha ao buscar movimentações de estoque.");
-                console.error("Erro ao buscar dados:", error);
-            } finally {
-                setIsLoading(false);
+            if (response.data.success) {
+                const movMapeados = response.data.data.map(mov => ({
+                    id: mov.id,
+                    material: mov.material, // já vem STRING do DTO — perfeito
+                    estoqueOrigem: mov.estoqueOrigem, // número ou null
+                    estoqueDestino: mov.estoqueDestino, // número
+                    quantidade: mov.quantidade,
+                    tipoMov: mov.tipoMov,
+                    dataMovimentacao: mov.dataMovimentacao,
+                    funcionarioResponsavel: mov.funcionarioResponsavel // id do funcionário
+                }));
+                setMovimentacoes(movMapeados);
+            } else {
+                toast.error("Erro ao carregar movimentações: " + response.data.message);
             }
-        };
+        } catch (error) {
+            console.error("Erro ao buscar dados:", error);
+            toast.error("Falha ao buscar movimentações de estoque.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
+
+
+    // Chamar a função de busca no carregamento da página
+    useEffect(() => {
         fetchMovimentacoes();
     }, []);
 
@@ -60,13 +62,14 @@ export default function ListarMovimentacaoEstoque() {
 
     const handleSalvarEdicao = async (movimentacaoEditada) => {
         try {
-            // --- Chamada à API para ATUALIZAR ---
-            // await api.put(`/movEstoque/alterar/${movimentacaoEditada.id}`, movimentacaoEditada);
-            
+            // PASSO 3: Descomentar a chamada à API para ATUALIZAR
+            // [cite: jvsenha/engecore/Engecore-94ce553f16529596681d3d20d20b06d0bc22d339/src/main/java/br/com/engecore/Controller/MovEstoqueController.java]
+            await api.put(`/movEstoque/alterar/${movimentacaoEditada.id}`, movimentacaoEditada);
+
             setMovimentacoes(movs => movs.map(m => m.id === movimentacaoEditada.id ? movimentacaoEditada : m));
             toast.success("Movimentação atualizada com sucesso!");
         } catch (error) {
-            toast.error("Erro ao atualizar a movimentação.");
+            toast.error(error.response?.data?.message || "Erro ao atualizar a movimentação.");
             console.error("Erro ao atualizar movimentação:", error);
         } finally {
             setModalAberto(false);
@@ -87,19 +90,19 @@ export default function ListarMovimentacaoEstoque() {
 
     const confirmarDelecao = async (id) => {
         try {
-            // --- Chamada à API para DELETAR ---
-            // await api.delete(`/movEstoque/deletar/${id}`);
-
+            await api.delete(`/movEstoque/deletar/${id}`);
             setMovimentacoes(movs => movs.filter(m => m.id !== id));
             toast.success("Movimentação deletada com sucesso!");
-        } catch(error) {
-            console.error("Erro ao deletar movimentação:", error); 
-            toast.error("Erro ao deletar a movimentação.");
+        } catch (error) {
+            console.error("Erro ao deletar movimentação:", error);
+            toast.error(error.response?.data?.message || "Erro ao deletar a movimentação.");
         } finally {
             toast.dismiss();
         }
     };
-    
+
+    // A resposta da API (MovEstoqueResponse) já tem o campo 'material' como string
+    // [cite: jvsenha/engecore/Engecore-94ce553f16529596681d3d20d20b06d0bc22d339/src/main/java/br/com/engecore/DTO/MovEstoqueResponse.java]
     const movimentacoesFiltradas = movimentacoes.filter(m => {
         const matchSearch = m.material.toLowerCase().includes(searchTerm.toLowerCase());
         const matchTipo = !filtroTipo || m.tipoMov === filtroTipo;
@@ -107,13 +110,14 @@ export default function ListarMovimentacaoEstoque() {
     });
 
     const totais = movimentacoesFiltradas.reduce((acc, m) => {
-        if (m.tipoMov === 'ENTRADA' || m.tipoMov === 'AJUSTE') acc.entradas += m.quantidade;
-        if (m.tipoMov === 'SAIDA') acc.saidas += m.quantidade;
+        const quantidade = Number(m.quantidade) || 0;
+        if (m.tipoMov === 'ENTRADA' || m.tipoMov === 'AJUSTE') acc.entradas += quantidade;
+        if (m.tipoMov === 'SAIDA') acc.saidas += quantidade;
         return acc;
     }, { entradas: 0, saidas: 0 });
 
     const getTipoBadgeStyle = (tipo) => {
-        switch(tipo) {
+        switch (tipo) {
             case 'ENTRADA': return 'bg-green-100 text-green-800 border-green-200';
             case 'SAIDA': return 'bg-red-100 text-red-800 border-red-200';
             case 'TRANSFERENCIA': return 'bg-blue-100 text-blue-800 border-blue-200';
@@ -121,7 +125,7 @@ export default function ListarMovimentacaoEstoque() {
             default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
-    
+
     return (
         <div className="bg-gray-100 min-h-screen">
             <Sidebar />
@@ -158,7 +162,7 @@ export default function ListarMovimentacaoEstoque() {
                                 <i className="fas fa-arrow-up text-3xl text-red-500"></i>
                             </div>
                         </div>
-                        
+
                         {/* Filtros */}
                         <div className="bg-gray-50 p-4 rounded-lg mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
@@ -223,9 +227,10 @@ export default function ListarMovimentacaoEstoque() {
                     movimentacao={movimentacaoSelecionada}
                     onClose={() => setModalAberto(false)}
                     onSave={handleSalvarEdicao}
+                // Você precisará passar as listas de estoques e funcionários para o modal
+                // se ele permitir a edição desses campos.
                 />
             )}
         </div>
     );
 }
-

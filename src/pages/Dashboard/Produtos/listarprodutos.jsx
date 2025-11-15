@@ -37,17 +37,11 @@ export default function ListarProdutos() {
   });
 
   const handleProdutoAtualizado = (insumoAtualizadoDTO) => {
-    // 1. Recebe o DTO do modal (que veio da API)
 
-    // 2. Mapeia o DTO para o formato de "produto" usado localmente
     const produtoMapeado = mapInsumoToProduto(insumoAtualizadoDTO);
-
-    // 3. Atualiza o estado "produtos"
     setProdutos((prev) =>
       prev.map((p) => (p.id === produtoMapeado.id ? produtoMapeado : p))
     );
-
-    // 4. Fecha o modal
     handleCloseModals();
   };
 
@@ -69,24 +63,25 @@ export default function ListarProdutos() {
     "Ferro e Aço",
   ];
 
-  useEffect(() => {
-    async function fetchInsumos() {
-      setLoading(true);
-      try {
-        const response = await api.get("/insumo/listar");
-        if (response.data.success) {
-          const insumosMapeados = response.data.data.map(mapInsumoToProduto);
-          setProdutos(insumosMapeados);
-        } else {
-          toast.error("Erro ao carregar insumos.");
-          setErro("Erro ao carregar insumos.");
-        }
-      } catch (err) {
-        toast.error("Falha ao conectar com o servidor.");
-        setErro("Falha ao conectar com o servidor.");
+  async function fetchInsumos() {
+    setLoading(true);
+    try {
+      const response = await api.get("/insumo/listar", { withCredentials: true });
+      if (response.data.success) {
+        const insumosMapeados = response.data.data.map(mapInsumoToProduto);
+        setProdutos(insumosMapeados);
+      } else {
+        toast.error("Erro ao carregar insumos.");
+        setErro("Erro ao carregar insumos.");
       }
-      setLoading(false);
+    } catch (err) {
+      toast.error("Falha ao conectar com o servidor.");
+      setErro("Falha ao conectar com o servidor.");
     }
+    setLoading(false);
+  }
+
+  useEffect(() => {
     fetchInsumos();
   }, []);
 

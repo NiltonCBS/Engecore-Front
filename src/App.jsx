@@ -8,7 +8,6 @@ import SingIn from "./pages/singIn.jsx";
 import Dashboard from './pages/Dashboard/dashboard.jsx';
 import Produtos from './pages/Dashboard/Produtos/produtos.jsx';
 import ListarProdutos from './pages/Dashboard/Produtos/listarprodutos.jsx';
-import Categorias from './pages/Dashboard/Produtos/categoriaproduto.jsx';
 import Estoque from './pages/Dashboard/Produtos/estoque.jsx';
 import CadCliente from './pages/Dashboard/Clientes/cadastrarcliente.jsx';
 import ListarCliente from './pages/Dashboard/Clientes/listarcliente.jsx';
@@ -46,7 +45,6 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/produtos/adicionar" element={<Produtos />} />
         <Route path="/produtos/listar" element={<ListarProdutos />} />
-        <Route path="/produtos/categorias" element={<Categorias />} />
         <Route path="/produtos/estoque" element={<Estoque />} />
         <Route path="/users/adicionar" element={<CadCliente />} />
         <Route path="/users/listar" element={<ListarCliente />} />

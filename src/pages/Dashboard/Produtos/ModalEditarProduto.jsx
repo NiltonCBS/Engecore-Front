@@ -41,6 +41,7 @@ export default function ModalEditarProduto({
         setFormData((prev) => ({ ...prev, [name]: value }));
     };
 
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -62,13 +63,9 @@ export default function ModalEditarProduto({
                 `/insumo/alterar/${produto.id}`,
                 insumoDTO
             );
-
-            // 2. CHAMA A FUNÇÃO DO PAI (recebida via props)
-            //    e passa o dado que a API retornou (response.data.data)
             onProdutoAtualizado(response.data.data);
-
             toast.success("Insumo atualizado com sucesso!");
-            onClose(); // Fecha o modal
+            onClose();
         } catch (error) {
             toast.error(
                 "Erro ao atualizar insumo: " +

@@ -150,10 +150,7 @@ const handleLogout = async () => {
                                 <i className="fas fa-plus mr-3"></i>
                                 Adicionar Produto
                             </NavLink>
-                            <NavLink to="/produtos/categorias" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
-                                <i className="fas fa-tags mr-3"></i>
-                                Categorias
-                            </NavLink>
+                         
                         </div>
                     </div>
 

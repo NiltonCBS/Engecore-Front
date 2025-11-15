@@ -39,11 +39,10 @@ export default function ListarClientes() {
     try {
       setLoading(true);
       setErro("");
-      
+    
       const response = await api.get("/cliente/listar", { withCredentials: true });
       
       if (response.data.success) {
-        // Mapear os dados do backend para o formato esperado pelo frontend
         const clientesMapeados = response.data.data.map(cliente => ({
           id: cliente.id,
           nome: cliente.nome,
@@ -68,7 +67,7 @@ export default function ListarClientes() {
         
         setClientes(clientesMapeados);
       } else {
-        setErro("Erro ao carregar clientes");
+       toast.error("Erro ao carregar clientes");
       }
     } catch (error) {
       console.error("Erro ao buscar clientes:", error);
@@ -163,7 +162,6 @@ export default function ListarClientes() {
   };
 
   const editarCliente = (cliente) => {
-    console.log("Editando cliente:", cliente); // Debug
     setClienteParaEdicao(cliente);
     setMostrarModalEdicao(true);
   };
