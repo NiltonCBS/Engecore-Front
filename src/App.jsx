@@ -21,13 +21,14 @@ import ListarMovimentacaoEstoque from './pages/Dashboard/Estoque/listarMovimenta
 
 import CotacaoDeValores from './pages/Dashboard/Cotacoes/CotacaoDeValores.jsx';
 import MostrarCotacao from './pages/Dashboard/Cotacoes/MostrarCotacao.jsx';
+import ListarCotacoes from './pages/Dashboard/Cotacoes/ListarCotacoes.jsx';
 
 function App() {
 
 
   return (
     <BrowserRouter>
-    <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -54,8 +55,9 @@ function App() {
         <Route path="/financeiro/listar" element={<ListarMovimentacoesFinanceira />} />
         <Route path="/estoque/adicionar" element={<CadastrarMovimentacaoEstoque />} />
         <Route path="/estoque/listar" element={<ListarMovimentacaoEstoque />} />
-        <Route path="/cotacoes" element={<CotacaoDeValores />} />
-        <Route path="/cotacoes/detalhes" element={<MostrarCotacao />} />
+        <Route path="/cotacoes" element={<ListarCotacoes />} />
+        <Route path="/cotacoes/nova" element={<CotacaoDeValores />} />
+        <Route path="/cotacoes/detalhes/:id" element={<MostrarCotacao />} />
       </Routes>
     </BrowserRouter>
   )
