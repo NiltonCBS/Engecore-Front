@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import Sidebar from '../../../components/SideBar';
-import Header from '../../../components/Header';
+import Sidebar from '../../../components/SideBar.jsx'; // Extensão .jsx adicionada
+import Header from '../../../components/Header.jsx'; // Extensão .jsx adicionada
 import { toast } from 'react-toastify';
 import { api } from '../../../services/api';
 
@@ -15,48 +15,52 @@ export default function MostrarCotacao() {
     const [loading, setLoading] = useState(true);
     const [isConfirmando, setIsConfirmando] = useState(false);
     const [isRegerando, setIsRegerando] = useState(false);
+    const [isExportando, setIsExportando] = useState(false); // Estado para o botão PDF
     const [fornecedorSelecionado, setFornecedorSelecionado] = useState(null);
 
     // Carrega os dados da cotação e suas propostas
     useEffect(() => {
         if (!id) {
             toast.error("ID de cotação não fornecido.");
-            navigate("/cotacoes");
+            navigate("/cotacoes/listar"); // Navega para a lista
             return;
         }
 
         async function carregarDetalhesCotacao() {
             setLoading(true);
             try {
-                const [cotacaoRes, propostasRes] = await Promise.all([
-                    api.get(`/cotacoes/${id}`),
-                    api.get(`/cotacoes/${id}/propostas`)
-                ]);
+                // CORREÇÃO: Faz apenas UMA chamada para buscar todos os dados
+                const response = await api.get(`/cotacoes/${id}`); //
 
-                if (cotacaoRes.data.success) {
-                    setCotacaoInfo(cotacaoRes.data.data);
-                } else {
-                    throw new Error(cotacaoRes.data.message);
-                }
+                if (response.data.success) {
+                    const dadosCotacao = response.data.data;
+                    const propostasRecebidas = dadosCotacao.propostas || []; //
 
-                if (propostasRes.data.success) {
-                    const propostasRecebidas = propostasRes.data.data;
+                    setCotacaoInfo(dadosCotacao);
                     setPropostas(propostasRecebidas);
                     
+                    // Lógica para selecionar o melhor preço (ou o confirmado) por padrão
+                    const propostaConfirmada = !dadosCotacao.status || dadosCotacao.status !== 'ABERTA' 
+                        ? propostasRecebidas.find(p => p.id === fornecedorSelecionado) // Assume que 'fornecedorSelecionado' ID foi salvo
+                        : null;
+                    
                     const melhorProposta = propostasRecebidas.find(p => p.melhorPreco);
-                    if (melhorProposta) {
+
+                    if (propostaConfirmada) {
+                         setFornecedorSelecionado(propostaConfirmada.id);
+                    } else if (melhorProposta) {
                         setFornecedorSelecionado(melhorProposta.id);
                     } else if (propostasRecebidas.length > 0) {
                         setFornecedorSelecionado(propostasRecebidas[0].id);
                     }
                 } else {
-                    throw new Error(propostasRes.data.message);
+                    throw new Error(response.data.message);
                 }
 
             } catch (error) {
                 toast.error(`Erro ao carregar cotação: ${error.message}`);
                 console.error(error);
-                navigate("/cotacoes"); 
+                navigate("/cotacoes/listar"); 
             } finally {
                 setLoading(false);
             }
@@ -82,9 +86,9 @@ export default function MostrarCotacao() {
 
         setIsConfirmando(true); // Ativa loading do botão confirmar
         try {
-            await api.post(`/cotacoes/propostas/${fornecedorSelecionado}/confirmar`);
+            await api.post(`/cotacoes/propostas/${fornecedorSelecionado}/confirmar`); //
             toast.success(`Pedido confirmado com fornecedor ${fornecedorAtivo.fornecedor}!`);
-            navigate('/cotacoes'); // Volta para a lista
+            navigate('/cotacoes/listar'); // Volta para a lista
             
         } catch (error) {
             toast.error(error.response?.data?.message || "Erro ao confirmar pedido.");
@@ -98,7 +102,7 @@ export default function MostrarCotacao() {
     const handleRegerarPropostas = async () => {
         setIsRegerando(true);
         try {
-            const response = await api.post(`/cotacoes/${id}/regerar-propostas`);
+            const response = await api.post(`/cotacoes/${id}/regerar-propostas`); //
             if (response.data.success) {
                 const novasPropostas = response.data.data;
                 setPropostas(novasPropostas);
@@ -122,6 +126,39 @@ export default function MostrarCotacao() {
             setIsRegerando(false);
         }
     };
+
+    // FUNÇÃO DO BOTÃO DE GERAR RELATÓRIO PDF
+    const handleExportarPdf = async () => {
+        if (!id) return;
+
+        setIsExportando(true);
+        try {
+            // Chama o endpoint do RelatorioController
+            //
+            const response = await api.get(`/relatorios/cotacao/${id}/pdf`, {
+                responseType: 'blob', // Informa ao axios para tratar a resposta como um arquivo binário
+            });
+
+            // Cria um link temporário para forçar o download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Cotacao_${id}.pdf`); // Nome do arquivo
+            document.body.appendChild(link);
+            link.click();
+            
+            // Limpa o link da memória
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+        } catch (error) {
+            toast.error("Erro ao gerar o PDF da cotação.");
+            console.error("Erro ao exportar PDF:", error);
+        } finally {
+            setIsExportando(false);
+        }
+    };
+
 
     // Exibe loading enquanto carrega os dados
     if (loading) {
@@ -202,11 +239,10 @@ export default function MostrarCotacao() {
                             <div className="bg-white rounded-xl shadow-md overflow-hidden">
                                 <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                                     <h3 className="text-lg font-semibold text-gray-800">Comparativo de Fornecedores ({propostas.length} encontrados)</h3>
-                                    {/* 3. BOTÃO DE REGERAR ADICIONADO AQUI */}
                                     {isAberta && (
                                         <button
                                             onClick={handleRegerarPropostas}
-                                            disabled={isRegerando}
+                                            disabled={isRegerando || isConfirmando || isExportando}
                                             className="px-3 py-1.5 bg-white border border-gray-300 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-50 disabled:opacity-50"
                                         >
                                             <i className={`fas fa-sync-alt ${isRegerando ? 'fa-spin' : ''} mr-2`}></i>
@@ -216,7 +252,6 @@ export default function MostrarCotacao() {
                                 </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full">
-                                        {/* ... (thead da tabela) ... */}
                                         <thead className="bg-gray-100">
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Fornecedor</th>
@@ -230,8 +265,8 @@ export default function MostrarCotacao() {
                                             {propostas.map((proposta) => (
                                                 <tr
                                                     key={proposta.id}
-                                                    className={`border-b border-gray-100 transition-colors cursor-pointer ${proposta.melhorPreco ? 'bg-green-50 hover:bg-green-100' : 'hover:bg-gray-50'} ${fornecedorSelecionado === proposta.id ? 'border-l-4 border-cordes-blue' : ''}`}
-                                                    onClick={() => setFornecedorSelecionado(proposta.id)}
+                                                    className={`border-b border-gray-100 transition-colors ${proposta.melhorPreco ? 'bg-green-50' : ''} ${isAberta ? 'cursor-pointer' : 'cursor-default'} ${proposta.melhorPreco && isAberta ? 'hover:bg-green-100' : (isAberta ? 'hover:bg-gray-50' : '')} ${fornecedorSelecionado === proposta.id ? 'border-l-4 border-cordes-blue' : ''}`}
+                                                    onClick={() => isAberta && setFornecedorSelecionado(proposta.id)}
                                                 >
                                                     <td className="px-4 py-4">
                                                         <div className="flex items-center gap-2">
@@ -249,10 +284,31 @@ export default function MostrarCotacao() {
                                                     <td className="px-4 py-4 text-sm text-gray-700">{proposta.condicaoPagamento}</td>
                                                     <td className="px-4 py-4">
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); setFornecedorSelecionado(proposta.id); }}
-                                                            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors shadow-sm ${fornecedorSelecionado === proposta.id ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                                                            onClick={(e) => { e.stopPropagation(); isAberta && setFornecedorSelecionado(proposta.id); }}
+                                                            disabled={!isAberta}
+                                                            className={`
+                                                                px-3 py-1.5 text-xs font-medium rounded-lg transition-colors shadow-sm
+                                                                ${fornecedorSelecionado === proposta.id ?
+                                                                    (isAberta ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-green-600 text-white')
+                                                                    :
+                                                                    (isAberta ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-gray-100 text-gray-400')
+                                                                }
+                                                                ${!isAberta ? 'disabled:opacity-70 disabled:cursor-not-allowed' : ''}
+                                                            `}
                                                         >
-                                                            {fornecedorSelecionado === proposta.id ? (<span className="flex items-center gap-1"><i className="fas fa-check"></i> Selecionado</span>) : ('Selecionar')}
+                                                            {!isAberta ? (
+                                                                fornecedorSelecionado === proposta.id ? (
+                                                                    <span className="flex items-center gap-1"><i className="fas fa-check-double"></i> Confirmado</span>
+                                                                ) : (
+                                                                    'Expirado'
+                                                                )
+                                                            ) : (
+                                                                fornecedorSelecionado === proposta.id ? (
+                                                                    <span className="flex items-center gap-1"><i className="fas fa-check"></i> Selecionado</span>
+                                                                ) : (
+                                                                    'Selecionar'
+                                                                )
+                                                            )}
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -278,7 +334,6 @@ export default function MostrarCotacao() {
                                 </h3>
                                 {fornecedorAtivo ? (
                                     <>
-                                        {/* ... (JSX do resumo com fornecedorAtivo) ... */}
                                         <div className="space-y-4 mb-6">
                                             <div className='p-3 bg-blue-50 border border-blue-200 rounded-lg'>
                                                 <label className="text-xs text-gray-700 block mb-1 font-semibold">Fornecedor Escolhido</label>
@@ -305,12 +360,12 @@ export default function MostrarCotacao() {
                                                 <div className="text-base font-medium text-gray-900">{fornecedorAtivo.condicaoPagamento || '-'}</div>
                                             </div>
                                         </div>
-
-                                        {/* 4. BOTÕES DE AÇÃO ATUALIZADOS */}
+                                        
+                                        {/* Botões de Ação */}
                                         <div className='space-y-3 pt-4 border-t'>
                                             <button
                                                 onClick={handleConfirmarCompra}
-                                                disabled={isConfirmando || isRegerando || !isAberta}
+                                                disabled={isConfirmando || isRegerando || isExportando || !isAberta}
                                                 className="w-full bg-green-600 text-white py-3 rounded-lg font-semibold text-base hover:bg-green-700 transition-colors shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
                                                 title={!isAberta ? 'Esta cotação não está mais aberta' : ''}
                                             >
@@ -318,11 +373,20 @@ export default function MostrarCotacao() {
                                                 {isConfirmando ? 'Confirmando...' : 'Confirmar Pedido'}
                                             </button>
                                             
-                                            {/* Botão de Regerar visível apenas se estiver ABERTA */}
+                                            {/* BOTÃO DE EXPORTAR PDF */}
+                                            <button
+                                                onClick={handleExportarPdf}
+                                                disabled={isConfirmando || isRegerando || isExportando}
+                                                className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50"
+                                            >
+                                                <i className={`fas ${isExportando ? 'fa-spinner fa-spin' : 'fa-file-pdf'}`}></i>
+                                                {isExportando ? 'Exportando...' : 'Exportar PDF'}
+                                            </button>
+
                                             {isAberta && (
                                                 <button
                                                     onClick={handleRegerarPropostas}
-                                                    disabled={isConfirmando || isRegerando}
+                                                    disabled={isConfirmando || isRegerando || isExportando}
                                                     className="w-full bg-white border border-gray-300 text-gray-700 py-3 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50"
                                                 >
                                                     <i className={`fas ${isRegerando ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
@@ -337,11 +401,10 @@ export default function MostrarCotacao() {
                                         <i className="fas fa-box-open text-3xl mb-3"></i>
                                         <p className="font-medium">Nenhuma proposta encontrada.</p>
                                         <p className="text-sm mt-2">Verifique se cadastrou fornecedores para este insumo e tente atualizar.</p>
-                                        {/* 5. BOTÃO DE REGERAR NA TELA VAZIA */}
                                         {isAberta && (
                                             <button
                                                 onClick={handleRegerarPropostas}
-                                                disabled={isConfirmando || isRegerando}
+                                                disabled={isConfirmando || isRegerando || isExportando}
                                                 className="w-full mt-4 bg-white border border-gray-300 text-gray-700 py-3 rounded-lg text-sm hover:bg-gray-50 transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50"
                                             >
                                                 <i className={`fas ${isRegerando ? 'fa-spinner fa-spin' : 'fa-sync-alt'}`}></i>
