@@ -43,7 +43,7 @@ const handleLogout = async () => {
             toast.success("Logout realizado com sucesso!");
             navigate("/"); // Redireciona para a tela de login
         } catch (error) {
-            toast.error("Erro ao fazer logout.");
+            toast.error("Erro ao fazer logout.", error);
         }
     };
 

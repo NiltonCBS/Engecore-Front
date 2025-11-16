@@ -1,24 +1,13 @@
 import { useState, useEffect } from "react";
-import Sidebar from "../../../components/SideBar.jsx";
-import Header from "../../../components/Header.jsx";
+import Sidebar from "../../../components/SideBar";
+import Header from "../../../components/Header";
 import { toast } from "react-toastify";
-import { api } from "../../../services/api.js";
+import obrasService from "../../../services/obrasService.js";
 import authService from "../../../services/authService.jsx";
 
-// Listas de Enums do Backend (definidas localmente por falta de endpoint)
-const tiposObra = [
-  "RESIDENCIAL",
-  "COMERCIAL",
-  "INFRAESTRUTURA"
-];
-
-const statusConst = [
-  "PLANEJAMENTO",
-  "EM_ANDAMENTO",
-  "CONCLUIDA",
-  "CANCELADA"
-];
-
+// Listas de Enums do Backend
+const tiposObra = ["RESIDENCIAL", "COMERCIAL", "INFRAESTRUTURA"];
+const statusConst = ["PLANEJAMENTO", "EM_ANDAMENTO", "CONCLUIDA", "CANCELADA"];
 const estados = [
   "AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA",
   "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN",
@@ -26,10 +15,10 @@ const estados = [
 ];
 
 export default function CadastrarObra() {
-  
   const [clientesLista, setClientesLista] = useState([]);
   const [funcionariosLista, setFuncionariosLista] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [buscandoCep, setBuscandoCep] = useState(false);
 
   const [obra, setObra] = useState({
     nomeObra: "",
@@ -37,7 +26,6 @@ export default function CadastrarObra() {
     responsavelId: "",
     status: "PLANEJAMENTO",
     tipo: "",
-    
     endereco: {
       rua: "",
       numero: "",
@@ -47,16 +35,15 @@ export default function CadastrarObra() {
       estado: "",
       cep: ""
     },
-    
     totalUnidades: 0,
     unidadesConcluidas: 0,
     valorTotal: "",
     valorLiberado: 0,
     pagosFornecedores: 0,
     custoPorUnidade: 0,
-    faixaRenda: null,
+    faixaRenda: "",
     documentacaoAprovada: false,
-    programaSocial: null,
+    programaSocial: "",
     dataInicio: "",
     dataPrevistaConclusao: "",
     dataConclusaoReal: null,
@@ -64,27 +51,26 @@ export default function CadastrarObra() {
   });
 
   useEffect(() => {
-    async function carregarDados() {
-      setLoading(true);
-      try {
-        const [clientesRes, funcionariosRes] = await Promise.all([
-          api.get("/cliente/listar"),
-          api.get("/funcionario/listar")
-        ]);
-
-        setClientesLista(clientesRes.data.data || []);
-        setFuncionariosLista(funcionariosRes.data.data || []);
-        
-      } catch (error) {
-        toast.error("Erro ao carregar dados de clientes ou funcionários.");
-        console.error(error);
-      } finally {
-        setLoading(false);
-      }
-    }
     carregarDados();
-  }, []); 
+  }, []);
 
+  const carregarDados = async () => {
+    setLoading(true);
+    try {
+      const [clientes, funcionarios] = await Promise.all([
+        obrasService.listarClientes(),
+        obrasService.listarFuncionarios()
+      ]);
+
+      setClientesLista(clientes);
+      setFuncionariosLista(funcionarios);
+    } catch (error) {
+      toast.error("Erro ao carregar dados de clientes ou funcionários.");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -103,34 +89,54 @@ export default function CadastrarObra() {
     }
   };
 
-  // 1. FUNÇÃO ADICIONADA (copiada do cadastrarcliente.jsx)
   const buscarCep = async (cep) => {
     const numeros = cep.replace(/\D/g, '');
-    if (numeros.length !== 8) return; 
+    if (numeros.length !== 8) return;
 
+    setBuscandoCep(true);
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${numeros}/json/`);
-      const data = await response.json();
-
-      if (data.erro) {
-        toast.warn("CEP não encontrado");
-        return;
-      }
-
-      // Atualiza o estado da OBRA
-      setObra(prev => ({ 
+      const endereco = await obrasService.buscarCep(cep);
+      
+      setObra(prev => ({
         ...prev,
         endereco: {
           ...prev.endereco,
-          rua: data.logradouro || prev.endereco.rua,
-          bairro: data.bairro || prev.endereco.bairro,
-          cidade: data.localidade || prev.endereco.cidade,
-          estado: data.uf || prev.endereco.estado,
+          rua: endereco.rua,
+          bairro: endereco.bairro,
+          cidade: endereco.cidade,
+          estado: endereco.estado,
         }
       }));
+      
+      toast.success("CEP encontrado!");
     } catch (error) {
-      console.error("Erro ao buscar CEP:", error);
-      toast.error("Erro ao buscar CEP. Tente novamente.");
+      toast.warn("CEP não encontrado. Preencha manualmente.");
+      console.error(error);
+    } finally {
+      setBuscandoCep(false);
+    }
+  };
+
+  const formatarCep = (valor) => {
+    const numeros = valor.replace(/\D/g, '');
+    return numeros.slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2');
+  };
+
+  const handleCepChange = (e) => {
+    const valor = e.target.value;
+    const valorFormatado = formatarCep(valor);
+    
+    setObra(prev => ({
+      ...prev,
+      endereco: {
+        ...prev.endereco,
+        cep: valorFormatado
+      }
+    }));
+    
+    // Chama a API de CEP quando completar 8 dígitos
+    if (valor.replace(/\D/g, '').length === 8) {
+      buscarCep(valor);
     }
   };
 
@@ -142,22 +148,12 @@ export default function CadastrarObra() {
       return;
     }
 
-    const dtoParaEnviar = {
-      ...obra,
-      valorTotal: parseFloat(obra.valorTotal) || 0,
-      totalUnidades: parseInt(obra.totalUnidades) || 0,
-      responsavelId: obra.responsavelId ? parseInt(obra.responsavelId) : currentUser.userId,
-      clienteId: parseInt(obra.clienteId),
-    };
-
-    if (!dtoParaEnviar.dataInicio) delete dtoParaEnviar.dataInicio;
-    if (!dtoParaEnviar.dataPrevistaConclusao) delete dtoParaEnviar.dataPrevistaConclusao;
-
-    console.log("Enviando para API:", dtoParaEnviar);
-
     try {
       setLoading(true);
-      await api.post("/obras/cadastrar", dtoParaEnviar);
+      
+      const obraFormatada = obrasService.formatarObraParaEnvio(obra, currentUser.userId);
+      
+      await obrasService.cadastrarObra(obraFormatada);
       
       toast.success("Obra cadastrada com sucesso!");
       limparCampos();
@@ -191,55 +187,15 @@ export default function CadastrarObra() {
       valorLiberado: 0,
       pagosFornecedores: 0,
       custoPorUnidade: 0,
-      faixaRenda: null,
+      faixaRenda: "",
       documentacaoAprovada: false,
-      programaSocial: null,
+      programaSocial: "",
       dataInicio: "",
       dataPrevistaConclusao: "",
       dataConclusaoReal: null,
       fases: []
     });
   };
-
-  const formatarCep = (valor) => {
-    const numeros = valor.replace(/\D/g, '');
-    return numeros
-      .slice(0, 8)
-      .replace(/(\d{5})(\d)/, '$1-$2');
-  };
-
-  // 2. FUNÇÃO ATUALIZADA
-  const handleCepChange = (e) => {
-    const valor = e.target.value;
-    const valorFormatado = formatarCep(valor);
-    setObra(prev => ({
-      ...prev,
-      endereco: {
-        ...prev.endereco,
-        cep: valorFormatado
-      }
-    }));
-    
-    // Chama a API de CEP
-    if (valor.replace(/\D/g, '').length === 8) {
-      buscarCep(valor);
-    }
-  };
-
-  const getStatusColor = () => {
-    switch(obra.status) {
-      case 'PLANEJAMENTO': return 'text-blue-600';
-      case 'EM_ANDAMENTO': return 'text-yellow-600';
-      case 'CONCLUIDA': return 'text-green-600';
-      case 'CANCELADA': return 'text-red-600';
-      default: return 'text-blue-600';
-    }
-  };
-
-  const getStatusText = () => {
-     return obra.status.replace("_", " ") || "PLANEJAMENTO";
-  };
-
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -316,14 +272,17 @@ export default function CadastrarObra() {
                   <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Endereço da Obra</h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     <div>
-                      <label className="block text-gray-700 font-medium mb-2">CEP</label>
+                      <label className="block text-gray-700 font-medium mb-2">
+                        CEP {buscandoCep && <span className="text-sm text-blue-600">(buscando...)</span>}
+                      </label>
                       <input
                         type="text"
                         name="endereco.cep"
                         value={obra.endereco.cep}
                         onChange={handleCepChange}
                         placeholder="00000-000"
-                        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
+                        disabled={buscandoCep}
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent disabled:bg-gray-100"
                         maxLength="9"
                       />
                     </div>
