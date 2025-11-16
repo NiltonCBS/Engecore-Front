@@ -14,10 +14,10 @@ export default function ListarProdutos() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-  const handleVisualizar = (produto) => {
+  /*const handleVisualizar = (produto) => {
     setProdutoSelecionado(produto);
     setIsViewModalOpen(true);
-  };
+  };*/
 
   const handleEditar = (produto) => {
     setProdutoSelecionado(produto);
@@ -74,9 +74,9 @@ export default function ListarProdutos() {
         toast.error("Erro ao carregar insumos.");
         setErro("Erro ao carregar insumos.");
       }
-    } catch (err) {
+    } catch (error) {
       toast.error("Falha ao conectar com o servidor.");
-      setErro("Falha ao conectar com o servidor.");
+      setErro("Falha ao conectar com o servidor.", error);
     }
     setLoading(false);
   }
@@ -418,7 +418,7 @@ export default function ListarProdutos() {
         isOpen={isEditModalOpen}
         onClose={handleCloseModals}
         produto={produtoSelecionado}
-        onProdutoAtualizado={handleProdutoAtualizado} // <-- AQUI!
+        onProdutoAtualizado={handleProdutoAtualizado}
       />
 
     </div>

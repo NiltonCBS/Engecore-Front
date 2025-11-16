@@ -143,6 +143,9 @@ export default function CadastrarCliente() {
     }
   };
 
+  const limparMascara = (valor) => valor.replace(/\D/g, "");
+
+
   const handleSubmit = async () => {
     // Monta o payload
     let payload = {
@@ -158,13 +161,13 @@ export default function CadastrarCliente() {
 
     if (cliente.tipoCliente === "Pessoa Física") {
       payload.usuarioFisico = {
-        cpf: cliente.cpfCnpj,
+        cpf: limparMascara(cliente.cpfCnpj),
         rg: cliente.rg || "",
         dataNascimento: cliente.dataNascimento || null
       };
     } else {
       payload.usuarioJuridico = {
-        cnpj: cliente.cpfCnpj,
+        cnpj: limparMascara(cliente.cpfCnpj),
         razaoSocial: cliente.razaoSocial,
         nomeFantasia: cliente.nome,
         inscricaoEstadual: cliente.inscricaoEstadual
