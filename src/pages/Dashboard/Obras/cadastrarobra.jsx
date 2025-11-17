@@ -148,6 +148,14 @@ export default function CadastrarObra() {
       return;
     }
 
+     if (obra.dataInicio && obra.dataPrevistaConclusao) {
+     
+      if (obra.dataPrevistaConclusao < obra.dataInicio) {
+        toast.warn("A data de Previsão de Término não pode ser anterior à Data de Início.");
+        return; 
+      }
+    }
+
     try {
       setLoading(true);
       
@@ -429,7 +437,7 @@ export default function CadastrarObra() {
                         onChange={handleChange}
                         className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                       >
-                        <option value="">(Usuário Logado)</option>
+                        <option value="">Selecione o responsável</option>
                         {funcionariosLista.map(func => (
                           <option key={func.id} value={func.id}>{func.nome} ({func.cargo})</option>
                         ))}

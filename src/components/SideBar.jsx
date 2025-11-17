@@ -13,6 +13,7 @@ export default function Sidebar() {
     const [isProdutosOpen, setIsProdutosOpen] = useState(false);
     const [isUsersOpen, setIsUsersOpen] = useState(false);
     const [isObrasOpen, setIsObrasOpen] = useState(false);
+    const [isFonecedoresOpen, setIsFonecedoresOpen] = useState(false);
     const [isEstoqueOpen, setIsEstoqueOpen] = useState(false);
     const [isFinanceiroOpen, setIsFinanceiroOpen] = useState(false);
     const [isCotacoesOpen, setIsCotacoesOpen] = useState(false);
@@ -32,6 +33,7 @@ export default function Sidebar() {
     const toggleProdutos = () => setIsProdutosOpen(!isProdutosOpen);
     const toggleUsers = () => setIsUsersOpen(!isUsersOpen);
     const toggleObras = () => setIsObrasOpen(!isObrasOpen);
+    const toggleFonecedores = () => setIsFonecedoresOpen(!isFonecedoresOpen);
     const toggleCotacoes = () => setIsCotacoesOpen(!isCotacoesOpen);
     const toggleEstoque = () => setIsEstoqueOpen(!isEstoqueOpen);
     const toggleFinanceiro = () => setIsFinanceiroOpen(!isFinanceiroOpen);
@@ -120,6 +122,30 @@ export default function Sidebar() {
                             <NavLink to="/obras/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
                                 Adicionar Obra
+                            </NavLink>
+                        </div>
+                    </div>
+                    {/* Menu Fonecedores */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleFonecedores}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-building mr-3 group-hover:text-white"></i>
+                                Fonecedores
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFonecedoresOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFonecedoresOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/obras/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Fonecedores
+                            </NavLink>
+                            <NavLink to="/obras/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Fonecedores
                             </NavLink>
                         </div>
                     </div>
