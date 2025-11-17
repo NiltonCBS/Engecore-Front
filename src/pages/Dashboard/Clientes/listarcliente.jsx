@@ -6,6 +6,29 @@ import { api } from "../../../services/api";
 import ModalEditarCliente from "./modalcliente";
 import { toast } from 'react-toastify';
 
+function formatarCpfCnpj(valor) {
+  if (!valor) return "";
+
+  // Remove tudo que não seja número
+  const num = valor.replace(/\D/g, "");
+
+  // CPF -> 11 dígitos
+  if (num.length === 11) {
+    return num.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+  }
+
+  // CNPJ -> 14 dígitos
+  if (num.length === 14) {
+    return num.replace(
+      /(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/,
+      "$1.$2.$3/$4-$5"
+    );
+  }
+
+  // Se não for nenhum dos dois, retorna como está
+  return valor;
+}
+
 export default function ListarClientes() {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -19,10 +42,10 @@ export default function ListarClientes() {
 
   const [paginaAtual, setPaginaAtual] = useState(1);
   const [clientesPorPagina] = useState(10);
-  const [clienteSelecionado, setClienteSelecionado] = useState(null);
+  const [clienteSelecionado, setClienteSelecionado] = useState(false);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarModalEdicao, setMostrarModalEdicao] = useState(false);
-  const [clienteParaEdicao, setClienteParaEdicao] = useState(null);
+  const [clienteParaEdicao, setClienteParaEdicao] = useState(false);
 
   const tiposCliente = [
     "Pessoa Física",
@@ -46,9 +69,9 @@ export default function ListarClientes() {
         const clientesMapeados = response.data.data.map(cliente => ({
           id: cliente.id,
           nome: cliente.nome,
-          razaoSocial: cliente.usuarioJuridico?.razaoSocial || "",
+          razaoSocial: cliente.razaoSocial || "",
           tipoCliente: cliente.tipoPessoa === "FISICA" ? "Pessoa Física" : "Pessoa Jurídica",
-          cpfCnpj: cliente.usuarioFisico?.cpf || cliente.usuarioJuridico?.cnpj || "",
+          cpfCnpj: formatarCpfCnpj(cliente.cpf || cliente.cnpj || ""),
           inscricaoEstadual: cliente.usuarioJuridico?.inscricaoEstadual || "",
           telefone: cliente.telefone,
           email: cliente.email,
@@ -523,7 +546,7 @@ export default function ListarClientes() {
       </div>
 
       {/* Modal de Visualização */}
-      {mostrarModal && clienteSelecionado && (
+      {mostrarModal && clienteSelecionado &&(
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b">

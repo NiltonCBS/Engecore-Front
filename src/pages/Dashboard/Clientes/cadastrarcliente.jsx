@@ -2,17 +2,18 @@ import { useState } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
 import { toast } from 'react-toastify';
-import { api } from "../../../services/api"; // ajuste o caminho certo para seu api.js
+import { api } from "../../../services/api";
 
 
 export default function CadastrarCliente() {
-  // Estado para armazenar os dados do cliente
   const [cliente, setCliente] = useState({
     nome: "",
     razaoSocial: "",
     tipoCliente: "",
     cpfCnpj: "",
     inscricaoEstadual: "",
+    rg: "",
+    dataNascimento: "",
     telefone: "",
     email: "",
     endereco: {
@@ -34,11 +35,9 @@ export default function CadastrarCliente() {
     status: "ativo"
   });
 
-  // NOVO: Função para buscar dados do CNPJ na API Minha Receita
   const buscarCnpj = async (cnpj) => {
-    // Remove caracteres não numéricos
     const numeros = cnpj.replace(/\D/g, '');
-    if (numeros.length !== 14) return; // Só busca se for um CNPJ completo
+    if (numeros.length !== 14) return;
 
     try {
       const response = await fetch(`https://minhareceita.org/${numeros}`);
@@ -49,12 +48,11 @@ export default function CadastrarCliente() {
 
       const data = await response.json();
 
-      // Atualiza o estado do cliente com os dados retornados da API
       setCliente(prev => ({
         ...prev,
         nome: data.nome_fantasia || "",
         razaoSocial: data.razao_social || "",
-        email: data.email || prev.email, // Mantém o email digitado se a API não retornar
+        email: data.email || prev.email,
         endereco: {
           ...prev.endereco,
           rua: data.logradouro || "",
@@ -67,6 +65,7 @@ export default function CadastrarCliente() {
         }
       }));
 
+      toast.success("Dados do CNPJ carregados com sucesso!");
     } catch (error) {
       console.error("Erro ao buscar CNPJ:", error);
       toast.error("Erro ao consultar o CNPJ. Verifique o número e tente novamente.");
@@ -74,9 +73,8 @@ export default function CadastrarCliente() {
   };
 
   const buscarCep = async (cep) => {
-    // Remove caracteres não numéricos
     const numeros = cep.replace(/\D/g, '');
-    if (numeros.length !== 8) return; // CEP inválido
+    if (numeros.length !== 8) return;
 
     try {
       const response = await fetch(`https://viacep.com.br/ws/${numeros}/json/`);
@@ -87,7 +85,6 @@ export default function CadastrarCliente() {
         return;
       }
 
-      // Atualiza o estado do cliente com os dados retornados
       setCliente(prev => ({
         ...prev,
         endereco: {
@@ -96,7 +93,7 @@ export default function CadastrarCliente() {
           bairro: data.bairro || "",
           cidade: data.localidade || "",
           estado: data.uf || "",
-          cep: formatarCep(data.cep || numeros) // já formata o CEP
+          cep: formatarCep(data.cep || numeros)
         }
       }));
     } catch (error) {
@@ -145,52 +142,53 @@ export default function CadastrarCliente() {
 
   const limparMascara = (valor) => valor.replace(/\D/g, "");
 
-
   const handleSubmit = async () => {
-    // Monta o payload
-    let payload = {
-      nome: cliente.nome,
-      email: cliente.email,
-      senha: "123456", // provisório
-      telefone: cliente.telefone,
-      status: cliente.status === "ativo" ? "STATUS_ATIVO" : "STATUS_INATIVO",
-      role: "ROLE_CLIENTE", // 👈 ajustado
-      tipoPessoa: cliente.tipoCliente === "Pessoa Física" ? "FISICA" : "JURIDICA",
-      endereco: cliente.endereco
-    };
-
-    if (cliente.tipoCliente === "Pessoa Física") {
-      payload.usuarioFisico = {
-        cpf: limparMascara(cliente.cpfCnpj),
-        rg: cliente.rg || "",
-        dataNascimento: cliente.dataNascimento || null
-      };
-    } else {
-      payload.usuarioJuridico = {
-        cnpj: limparMascara(cliente.cpfCnpj),
-        razaoSocial: cliente.razaoSocial,
-        nomeFantasia: cliente.nome,
-        inscricaoEstadual: cliente.inscricaoEstadual
-      };
-    }
-
-    // Validações básicas
     if (!cliente.nome || !cliente.cpfCnpj || !cliente.telefone) {
       toast.warn("Por favor, preencha os campos obrigatórios.");
       return;
     }
 
+    let payload = {
+      nome: cliente.nome,
+      email: cliente.email,
+      senha: "123456",
+      telefone: cliente.telefone,
+      status: cliente.status === "ativo" ? "STATUS_ATIVO" : "STATUS_INATIVO",
+      role: "ROLE_CLIENTE",
+      tipoPessoa: cliente.tipoCliente === "Pessoa Física" ? "FISICA" : "JURIDICA",
+      endereco: {
+        rua: cliente.endereco.rua,
+        numero: cliente.endereco.numero,
+        complemento: cliente.endereco.complemento,
+        bairro: cliente.endereco.bairro,
+        cidade: cliente.endereco.cidade,
+        estado: cliente.endereco.estado,
+        cep: cliente.endereco.cep
+      }
+    };
+
+    if (cliente.tipoCliente === "Pessoa Física") {
+      payload.cpf = limparMascara(cliente.cpfCnpj);
+      payload.rg = cliente.rg || "";
+      payload.dataNascimento = cliente.dataNascimento || null;
+    } else {
+      payload.cnpj = limparMascara(cliente.cpfCnpj);
+      payload.razaoSocial = cliente.razaoSocial;
+      payload.nomeFantasia = cliente.nome;
+      payload.inscricaoEstadual = cliente.inscricaoEstadual;
+    }
+
     try {
       const response = await api.post("/cliente/cadastrar", payload, { withCredentials: true });
-       toast.success("Cliente cadastrado com sucesso!");
+      toast.success("Cliente cadastrado com sucesso!");
       console.log("Resposta do servidor:", response.data);
       limparCampos();
     } catch (error) {
       console.error("Erro ao cadastrar cliente:", error.response?.data || error.message);
-      alert("Erro ao cadastrar cliente: " + (error.response?.data?.message || "Tente novamente."));
+      const errorMessage = error.response?.data?.message || error.response?.data || "Erro ao cadastrar cliente. Tente novamente.";
+      toast.error(errorMessage);
     }
   };
-
 
   const limparCampos = () => {
     setCliente({
@@ -199,6 +197,8 @@ export default function CadastrarCliente() {
       tipoCliente: "",
       cpfCnpj: "",
       inscricaoEstadual: "",
+      rg: "",
+      dataNascimento: "",
       telefone: "",
       email: "",
       endereco: {
@@ -236,10 +236,8 @@ export default function CadastrarCliente() {
     setCliente(prev => ({ ...prev, cpfCnpj: valorFormatado }));
   };
 
-  // NOVO: Handler para o evento onBlur do campo CNPJ
   const handleCnpjBlur = (e) => {
-    // Apenas busca se for Pessoa Jurídica ou MEI
-    if (cliente.tipoCliente.includes("Jurídica") || cliente.tipoCliente.includes("MEI")) {
+    if (cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") {
       buscarCnpj(e.target.value);
     }
   };
@@ -281,7 +279,6 @@ export default function CadastrarCliente() {
       buscarCep(valor);
     }
   };
-
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -340,7 +337,7 @@ export default function CadastrarCliente() {
                       name="cpfCnpj"
                       value={cliente.cpfCnpj}
                       onChange={handleCpfCnpjChange}
-                      onBlur={handleCnpjBlur} // ALTERADO: Adicionado o evento onBlur
+                      onBlur={handleCnpjBlur}
                       placeholder="000.000.000-00 ou 00.000.000/0000-00"
                       className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                       maxLength="18"
@@ -362,15 +359,39 @@ export default function CadastrarCliente() {
                   )}
 
                   {(cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") && (
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">Inscrição Estadual</label>
+                      <input
+                        type="text"
+                        name="inscricaoEstadual"
+                        value={cliente.inscricaoEstadual}
+                        onChange={handleChange}
+                        placeholder="Inscrição Estadual"
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
+                      />
+                    </div>
+                  )}
+
+                  {cliente.tipoCliente === "Pessoa Física" && (
                     <>
                       <div>
-                        <label className="block text-gray-700 font-medium mb-2">Inscrição Estadual</label>
+                        <label className="block text-gray-700 font-medium mb-2">RG</label>
                         <input
                           type="text"
-                          name="inscricaoEstadual"
-                          value={cliente.inscricaoEstadual}
+                          name="rg"
+                          value={cliente.rg}
                           onChange={handleChange}
-                          placeholder="Inscrição Estadual"
+                          placeholder="00.000.000-0"
+                          className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-2">Data de Nascimento</label>
+                        <input
+                          type="date"
+                          name="dataNascimento"
+                          value={cliente.dataNascimento}
+                          onChange={handleChange}
                           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                         />
                       </div>
@@ -384,13 +405,13 @@ export default function CadastrarCliente() {
                 <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Contato</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2">Celular </label>
+                    <label className="block text-gray-700 font-medium mb-2">Celular *</label>
                     <input
                       type="text"
                       name="telefone"
                       value={cliente.telefone}
                       onChange={handleTelefoneChange}
-                      placeholder="(00) 0000-0000"
+                      placeholder="(00) 00000-0000"
                       className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                       maxLength="15"
                     />
