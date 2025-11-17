@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import LogoEngecore from "/src/assets/images/logo engecore branca.svg";
 import { NavLink, useLocation } from "react-router-dom";
 import { useState, useEffect } from "react";
@@ -6,42 +7,47 @@ import authService from "../services/authService";
 import { toast } from 'react-toastify'; 
 
 export default function Sidebar() {
+    // Estados para controlar menus expandidos
     const location = useLocation();
     const navigate = useNavigate();
     const [isProdutosOpen, setIsProdutosOpen] = useState(false);
     const [isUsersOpen, setIsUsersOpen] = useState(false);
+    const [isFuncOpen, setIsFuncOpen] = useState(false);
     const [isObrasOpen, setIsObrasOpen] = useState(false);
-    // NOVO NOME E NOVO ESTADO
+    const [isFornecedoresOpen, setIsFornecedoresOpen] = useState(false); 
     const [isEstoqueOpen, setIsEstoqueOpen] = useState(false);
     const [isFinanceiroOpen, setIsFinanceiroOpen] = useState(false);
     const [isCotacoesOpen, setIsCotacoesOpen] = useState(false);
 
+    // Atualiza o estado dos menus com base na rota atual
     useEffect(() => {
         const path = location.pathname;
-
-        setIsProdutosOpen(path.startsWith('/produtos'));
+        setIsProdutosOpen(path.startsWith('/produtos') || path.startsWith('/marcas'));
         setIsUsersOpen(path.startsWith('/users'));
         setIsObrasOpen(path.startsWith('/obras'));
-        // LÓGICA SEPARADA
+        setIsFornecedoresOpen(path.startsWith('/fornecedores')); 
         setIsEstoqueOpen(path.startsWith('/estoque'));
         setIsFinanceiroOpen(path.startsWith('/financeiro'));
         setIsCotacoesOpen(path.startsWith('/cotacoes'));
+        // Não é necessário um estado para Relatórios, pois é um link direto
     }, [location.pathname]);
 
+    // Funções para alternar menus
     const toggleProdutos = () => setIsProdutosOpen(!isProdutosOpen);
     const toggleUsers = () => setIsUsersOpen(!isUsersOpen);
+    const toggleFunc = () => setIsFuncOpen(!isFuncOpen);
     const toggleObras = () => setIsObrasOpen(!isObrasOpen);
+    const toggleFornecedores = () => setIsFornecedoresOpen(!isFornecedoresOpen); 
     const toggleCotacoes = () => setIsCotacoesOpen(!isCotacoesOpen);
-
-    // FUNÇÕES SEPARADAS
     const toggleEstoque = () => setIsEstoqueOpen(!isEstoqueOpen);
     const toggleFinanceiro = () => setIsFinanceiroOpen(!isFinanceiroOpen);
 
-const handleLogout = async () => {
+    // Função de logout
+    const handleLogout = async () => {
         try {
             await authService.logout();
             toast.success("Logout realizado com sucesso!");
-            navigate("/"); // Redireciona para a tela de login
+            navigate("/");
         } catch (error) {
             toast.error("Erro ao fazer logout.", error);
         }
@@ -74,6 +80,20 @@ const handleLogout = async () => {
                         Dashboard
                     </NavLink>
 
+                    {/* NOVO LINK DE RELATÓRIOS */}
+                    <NavLink
+                        to="/relatorios"
+                        className={({ isActive }) =>
+                            `flex items-center px-4 py-3 rounded-lg transition-colors group ${isActive
+                                ? "bg-gray-700 text-white"
+                                : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                            }`
+                        }
+                    >
+                        <i className="fas fa-file-pdf mr-3 group-hover:text-white"></i>
+                        Relatórios
+                    </NavLink>
+
                     {/* Menu Clientes */}
                     <div>
                         <button
@@ -95,6 +115,30 @@ const handleLogout = async () => {
                             <NavLink to="/users/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
                                 Adicionar Cliente
+                            </NavLink>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleFunc}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-users mr-3 group-hover:text-white"></i>
+                                Funcionarios
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFuncOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFuncOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/funcionario/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Funcionarios
+                            </NavLink>
+                            <NavLink to="/funcionario/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Funcionario
                             </NavLink>
                         </div>
                     </div>
@@ -121,14 +165,43 @@ const handleLogout = async () => {
                                 <i className="fas fa-plus mr-3"></i>
                                 Adicionar Obra
                             </NavLink>
-                            {/*<NavLink to="/obras/categorias" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                        </div>
+                    </div>
+                    
+                    {/* Menu Fornecedores (ATUALIZADO) */}
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleFornecedores}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-truck mr-3 group-hover:text-white"></i>
+                                Fornecedores
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFornecedoresOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFornecedoresOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/fornecedores/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Fornecedores
+                            </NavLink>
+                            <NavLink to="/fornecedores/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Fornecedor
+                            </NavLink>
+                            <NavLink to="/fornecedores/produtos/vincular" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-link mr-3"></i>
+                                Vincular Produto
+                            </NavLink>
+                            <NavLink to="/fornecedores/produtos/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-tags mr-3"></i>
-                                Categorias Obras
-                            </NavLink>*/ }
+                                Listar Produtos
+                            </NavLink>
                         </div>
                     </div>
 
-                    {/* Menu Produtos */}
+                    {/* Menu Produtos (Catálogo) ATUALIZADO */}
                     <div>
                         <button
                             type="button"
@@ -137,24 +210,29 @@ const handleLogout = async () => {
                         >
                             <div className="flex items-center">
                                 <i className="fas fa-box mr-3 group-hover:text-white"></i>
-                                Produtos
+                                Catálogo (Insumos)
                             </div>
                             <i className={`fas fa-chevron-down transition-transform duration-200 ${isProdutosOpen ? "rotate-180" : ""}`}></i>
                         </button>
                         <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isProdutosOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
                             <NavLink to="/produtos/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-list mr-3"></i>
-                                Lista de Produtos
+                                Lista de Insumos
                             </NavLink>
                             <NavLink to="/produtos/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
-                                Adicionar Produto
+                                Adicionar Insumo
+                            </NavLink>
+                            {/* NOVO LINK DE MARCAS */}
+                            <NavLink to="/marcas" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-bookmark mr-3"></i>
+                                Gerenciar Marcas
                             </NavLink>
                          
                         </div>
                     </div>
 
-                    {/* Menu Estoque - CORRIGIDO */}
+                    {/* Menu Estoque */}
                     <div>
                         <button
                             type="button"
@@ -179,7 +257,7 @@ const handleLogout = async () => {
                         </div>
                     </div>
                     
-                    {/* Menu Financeiro - CORRIGIDO */}
+                    {/* Menu Financeiro */}
                     <div>
                         <button
                             type="button"
@@ -220,17 +298,18 @@ const handleLogout = async () => {
                         <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isCotacoesOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
                             <NavLink to="/cotacoes" end className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-list-alt mr-3"></i>
-                                Lista / Nova Cotação
+                                Listar Cotações
                             </NavLink>
-                            <NavLink to="/cotacoes/detalhes" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
-                                <i className="fas fa-search-dollar mr-3"></i>
-                                Detalhes da Cotação
+                            <NavLink to="/cotacoes/nova" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Nova Cotação
                             </NavLink>
                         </div>
                     </div>
                 </div>
             </nav>
 
+            {/* Rodapé do Sidebar com Logout */}
             <div className="p-4 bg-gray-800 flex-shrink-0">
                 <div className="flex items-center space-x-3">
                     <i className="fas fa-user-circle text-white text-3xl"></i>
@@ -240,7 +319,6 @@ const handleLogout = async () => {
                     </div>
                 </div>
 
-                {/* 3. Adicionar o botão aqui */}
                 <button
                     onClick={handleLogout}
                     className="w-full mt-4 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-colors group text-gray-300 hover:bg-red-700 hover:text-white"

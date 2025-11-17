@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
-import Sidebar from "../../../components/SideBar";
-import Header from "../../../components/Header";
+// CORREÇÃO: Adicionando .jsx às importações de componentes
+import Sidebar from "../../../components/SideBar.jsx";
+import Header from "../../../components/Header.jsx";
 import { NavLink } from "react-router-dom";
 import { api } from "../../../services/api";
-import ModalEditarCliente from "./modalcliente";
+import ModalEditarCliente from "./modalcliente.jsx"; // .jsx adicionado
 import { toast } from 'react-toastify';
 
 function formatarCpfCnpj(valor) {
@@ -84,7 +85,7 @@ export default function ListarClientes() {
             estado: cliente.endereco?.estado || "",
             cep: cliente.endereco?.cep || ""
           },
-          status: cliente.status === "STATUS_ATIVO" ? "ativo" : "inativo",
+          status: cliente.status === "STATUS_ATIVO" ? "ativo" : "inativo", // Mapeamento
           dataCadastro: cliente.dataCadastro || new Date().toISOString().split('T')[0]
         }));
         
@@ -103,7 +104,7 @@ export default function ListarClientes() {
   // Filtrar clientes
   const clientesFiltrados = clientes.filter(cliente => {
     const matchBusca = cliente.nome.toLowerCase().includes(filtros.busca.toLowerCase()) ||
-                      cliente.cpfCnpj.includes(filtros.busca) ||
+                      (cliente.cpfCnpj && cliente.cpfCnpj.includes(filtros.busca)) ||
                       cliente.email.toLowerCase().includes(filtros.busca.toLowerCase());
     
     const matchStatus = filtros.status === "" || cliente.status === filtros.status;
@@ -125,40 +126,38 @@ export default function ListarClientes() {
   };
 
   const formatarData = (data) => {
+    if (!data) return "N/A";
     return new Date(data).toLocaleDateString('pt-BR');
   };
 
  const alternarStatus = async (id) => {
   try {
-    // 1. Faz a chamada PUT para o endpoint. 
-    // Note que não enviamos um corpo (payload), pois o backend já sabe como alternar o status.
     const response = await api.put(`/usuarios/${id}/alterar-status`);
 
-    // 2. Extrai o novo status da resposta da API.
-    // Isso garante que o frontend sempre mostrará o que está salvo no banco de dados.
-    // Assumindo que a API responde com: { success: true, data: 'ATIVO' } ou similar.
     const statusRetornadoPelaApi = response.data?.data; 
     
     if (!statusRetornadoPelaApi) {
-      // Lança um erro se a resposta da API não vier no formato esperado.
       throw new Error("A API não retornou o novo status do cliente.");
     }
     
-    // 3. Converte o status para o formato usado no frontend (ex: 'ATIVO' -> 'ativo').
-    const novoStatus = statusRetornadoPelaApi.toLowerCase();
+    // --- ESTA É A CORREÇÃO ---
+    // Mapeia a resposta da API (ex: "STATUS_ATIVO") para o padrão do estado (ex: "ativo")
+    // Exatamente como é feito na função buscarClientes()
+    const novoStatus = statusRetornadoPelaApi === "STATUS_ATIVO" ? "ativo" : "inativo";
+    // -------------------------
 
-    // 4. Atualiza a lista de clientes no estado do React.
-    setClientes(clientesAtuais =>
-      clientesAtuais.map(cliente =>
+    // Atualiza a lista *principal* de clientes
+    // Renomeei a variável do map para 'listaCompleta' para evitar confusão
+    setClientes(listaCompleta =>
+      listaCompleta.map(cliente =>
         cliente.id === id ? { ...cliente, status: novoStatus } : cliente
       )
     );
 
-    // 5. Notifica o usuário sobre o sucesso da operação.
+    // Agora o toast também exibe a mensagem correta
      toast.success(`Cliente ${novoStatus === 'ativo' ? 'ativado' : 'desativado'} com sucesso!`);
 
   } catch (error) {
-    // 6. Captura e exibe erros de forma clara para o usuário.
     console.error("Erro ao alterar status do cliente:", error);
     const mensagemDeErro = error.response?.data?.message || error.message || "Ocorreu um erro inesperado.";
     toast.error(`Não foi possível alterar o status: ${mensagemDeErro}`);
@@ -166,18 +165,48 @@ export default function ListarClientes() {
 };
 
   const excluirCliente = async (id) => {
-    if (window.confirm('Tem certeza que deseja excluir este cliente?')) {
-      try {
-        console.log("Excluindo cliente com ID:", id); // Debug
-        await api.delete(`/cliente/deletar/${id}`, { withCredentials: true });
-        setClientes(prev => prev.filter(cliente => cliente.id !== id));
-        toast.success("Cliente excluído com sucesso!");
-      } catch (error) {
-        console.error("Erro ao excluir cliente:", error);
-        toast.error("Erro ao excluir cliente: " + (error.response?.data?.message || "Tente novamente"));
-      }
+    // Usando o toast de confirmação
+    toast.warn(
+      ({ closeToast }) => (
+        <div>
+          <p className="font-semibold">Confirmar Exclusão</p>
+          <p className="text-sm">Tem certeza que deseja excluir este cliente?</p>
+          <div className="flex gap-2 mt-3">
+            <button
+              className="px-3 py-1 bg-red-600 text-white rounded text-sm"
+              onClick={() => {
+                _confirmarExclusao(id);
+                closeToast();
+              }}
+            >
+              Sim, Excluir
+            </button>
+            <button
+              className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm"
+              onClick={closeToast}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      ),
+      { autoClose: false, closeOnClick: false, draggable: false }
+    );
+  };
+
+  // Função interna para ser chamada pelo toast
+  const _confirmarExclusao = async (id) => {
+    try {
+      console.log("Excluindo cliente com ID:", id); // Debug
+      await api.delete(`/cliente/deletar/${id}`, { withCredentials: true });
+      setClientes(prev => prev.filter(cliente => cliente.id !== id));
+      toast.success("Cliente excluído com sucesso!");
+    } catch (error) {
+      console.error("Erro ao excluir cliente:", error);
+      toast.error("Erro ao excluir cliente: " + (error.response?.data?.message || "Tente novamente"));
     }
   };
+
 
   const visualizarCliente = (cliente) => {
     setClienteSelecionado(cliente);
@@ -199,14 +228,28 @@ export default function ListarClientes() {
     setClienteParaEdicao(null);
   };
 
-  const handleClienteAtualizado = (clienteAtualizado) => {
+  const handleClienteAtualizado = (clienteAtualizadoDTO) => {
+    // Mapeia o DTO de Cliente (que vem do backend) para o formato do estado local
+    const clienteMapeado = {
+        id: clienteAtualizadoDTO.id,
+        nome: clienteAtualizadoDTO.nome,
+        razaoSocial: clienteAtualizadoDTO.razaoSocial || "",
+        tipoCliente: clienteAtualizadoDTO.tipoPessoa === "FISICA" ? "Pessoa Física" : "Pessoa Jurídica",
+        cpfCnpj: clienteAtualizadoDTO.cpf || clienteAtualizadoDTO.cnpj || "",
+        inscricaoEstadual: clienteAtualizadoDTO.inscricaoEstadual || "",
+        telefone: clienteAtualizadoDTO.telefone,
+        email: clienteAtualizadoDTO.email,
+        endereco: clienteAtualizadoDTO.endereco || { rua: "", numero: "", complemento: "", bairro: "", cidade: "", estado: "", cep: "" },
+        status: clienteAtualizadoDTO.status === "STATUS_ATIVO" ? "ativo" : "inativo",
+        dataCadastro: clienteAtualizadoDTO.dataCadastro || new Date().toISOString().split('T')[0]
+    };
+
     setClientes(prev =>
-      prev.map(cliente => {
-        const clienteId = cliente.id || cliente.idUsuario;
-        const clienteAtualizadoId = clienteAtualizado.id || clienteAtualizado.idUsuario;
-        return clienteId === clienteAtualizadoId ? clienteAtualizado : cliente;
-      })
+      prev.map(cliente => 
+        cliente.id === clienteMapeado.id ? clienteMapeado : cliente
+      )
     );
+    fecharModalEdicao(); // Fecha o modal de edição
   };
 
   const limparFiltros = () => {
@@ -225,10 +268,9 @@ export default function ListarClientes() {
         <div className="ml-64">
           <Header />
           <div className="p-6">
-            <div className="bg-white rounded-xl shadow-md p-8">
-              <div className="flex items-center justify-center">
-                <div className="text-xl text-gray-600">Carregando clientes...</div>
-              </div>
+            <div className="bg-white rounded-xl shadow-md p-8 flex justify-center items-center h-64">
+              <i className="fas fa-spinner fa-spin text-4xl text-cordes-blue"></i>
+              <span className="text-xl text-gray-600 ml-4">Carregando clientes...</span>
             </div>
           </div>
         </div>
@@ -283,7 +325,7 @@ export default function ListarClientes() {
                 </NavLink>
               </div>
 
-              {/* Estatísticas */}
+              {/* Estatísticas (agora usam a lista 'clientes' completa) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="text-blue-600 text-2xl font-bold">{clientes.length}</div>

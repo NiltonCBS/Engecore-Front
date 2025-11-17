@@ -1,93 +1,183 @@
-import { useState } from "react";
-import { toast } from 'react-toastify'; // Importação do toast
+import { useState, useEffect } from "react";
+import { toast } from 'react-toastify';
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
-import ModeSelector from "../../../components/ModeSelector";
 import CotacaoForm from "../../../components/CotacaoForm";
-import QuotationResults from "../../../components/QuotationResults";
-
-// Mock Data (baseado em dados de outros arquivos do projeto)
-// Mantenha os mocks aqui para fácil acesso em toda a página, se necessário.
-const mockObras = [
-    "Edifício Residencial ABC",
-    "Reforma Comercial XYZ",
-    "Construção Galpão Industrial",
-    "Ampliação Residencial Silva",
-    "Obra Condomínio Premium"
-];
-
-const mockUnidadesMedida = [
-    "kg", "ton", "m", "m²", "m³", "un", "cx", "sc", "pç", "par", "dz", "l"
-];
-
-const mockFornecedores = [
-    { id: 1, nome: "Materiais Silva & Cia", cnpj: "12.345.678/0001-90", valorUnitario: 32.50, prazoEntrega: "5 dias úteis", condicaoPagamento: "30 dias", isBestPrice: true },
-    { id: 2, nome: "Construtora Central Ltda", cnpj: "23.456.789/0001-01", valorUnitario: 34.80, prazoEntrega: "3 dias úteis", condicaoPagamento: "15/45 dias", isBestPrice: false },
-    { id: 3, nome: "Distribuidora Norte Sul", cnpj: "34.567.890/0001-12", valorUnitario: 35.20, prazoEntrega: "7 dias úteis", condicaoPagamento: "À vista com 5% desc.", isBestPrice: false },
-    { id: 4, nome: "MegaMat Construções", cnpj: "45.678.901/0001-23", valorUnitario: 36.90, prazoEntrega: "2 dias úteis", condicaoPagamento: "28 dias", isBestPrice: false },
-    { id: 5, nome: "Atacado do Construtor", cnpj: "56.789.012/0001-34", valorUnitario: 38.00, prazoEntrega: "4 dias úteis", condicaoPagamento: "30/60 dias", isBestPrice: false },
-];
+import ItensCotacaoForm from "../../../components/ItensCotacaoForm";
+import { api } from "../../../services/api";
+import { useNavigate } from "react-router-dom";
 
 export default function CotacaoDeValores() {
+
+    // Estados para os dados carregados da API
+    const [obras, setObras] = useState([]);
+    const [insumos, setInsumos] = useState([]);
+    const [funcionarios, setFuncionarios] = useState([]);
     const [cotacao, setCotacao] = useState({
-        obra: "",
-        dataNecessidade: "2025-10-20",
+        obraId: "",
+        dataNecessidade: new Date().toISOString().split('T')[0],
         prioridade: "Normal",
-        produto: "",
-        quantidade: 0,
-        unidadeMedida: "",
+        funcionarioId: ""
     });
-
-    const [mode, setMode] = useState('manual'); // 'manual' or 'auto'
+    const [itens, setItens] = useState([]); 
     const [loading, setLoading] = useState(false);
-    const [showResults, setShowResults] = useState(true);
+    const [loadingData, setLoadingData] = useState(true);
+    const navigate = useNavigate();
 
-    const handleModeChange = (newMode) => {
-        setMode(newMode);
-        // Esconde resultados quando troca para auto mode antes de gerar
-        if (newMode === 'auto') {
-            setShowResults(false);
-        } else {
-            setShowResults(true); // Mostra resultados mockados no modo manual
+    // Carrega Obras, Insumos e FUNCIONÁRIOS do backend
+    useEffect(() => {
+        async function carregarDados() {
+            setLoadingData(true);
+            try {
+                const [obrasRes, insumosRes, funcionariosRes] = await Promise.all([
+                    api.get("/obras/listar"),
+                    api.get("/insumo/listar"),
+                    api.get("/funcionario/listar")
+                ]);
+
+                if (obrasRes.data.success) {
+                    setObras(obrasRes.data.data.map(o => ({ 
+                        id: o.idObra || o.id,
+                        nome: o.nomeObra || o.nome 
+                    })));
+                }
+                
+                if (insumosRes.data.success) {
+                    setInsumos(insumosRes.data.data);
+                }
+
+                if (funcionariosRes.data.success) {
+                    setFuncionarios(funcionariosRes.data.data); 
+                }
+            } catch (error) {
+                toast.error("Erro ao carregar dados de obras, insumos ou funcionários.");
+                console.error(error);
+            } finally {
+                setLoadingData(false);
+            }
         }
-    };
+        carregarDados();
+    }, []);
 
-    const handleChange = (e) => {
+    // Atualiza os dados gerais (Obra, Data, etc)
+    const handleChangeGeral = (e) => {
         const { name, value } = e.target;
         setCotacao(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleGenerateQuote = () => {
-        if (mode === 'auto') {
-            setShowResults(false);
-            setLoading(true);
+    // LÓGICA PARA ADICIONAR ITEM (IMPLEMENTA A REGRA DE DUPLICIDADE)
+    const handleAddItem = (novoItem) => {
+        const itemExistente = itens.find(i => i.insumoId === novoItem.insumoId);
 
-            // Simula a requisição/processamento do modo automático
-            setTimeout(() => {
-                setLoading(false);
-                setShowResults(true);
-                toast.success("Cotação automática gerada!", { autoClose: 3000 });
-            }, 2500);
+        if (itemExistente) {
+            // Se existe, ATUALIZA A QUANTIDADE
+            toast.info("Item já adicionado. A quantidade foi somada.");
+            setItens(prevItens => 
+                prevItens.map(item => 
+                    item.insumoId === novoItem.insumoId 
+                    ? { ...item, quantidade: Number(item.quantidade) + Number(novoItem.quantidade) } 
+                    : item
+                )
+            );
         } else {
-            toast.info("Modo manual ativado. Prossiga para salvar e enviar.", { autoClose: 3000 });
+            // Se não existe, ADICIONA O NOVO ITEM
+            // Precisamos buscar o nome e a unidade da lista mestra
+            const insumoInfo = insumos.find(i => i.id === novoItem.insumoId);
+            const itemCompleto = {
+                insumoId: novoItem.insumoId,
+                insumoNome: insumoInfo.nome,
+                unidade: insumoInfo.unidade,
+                quantidade: novoItem.quantidade
+            };
+            setItens(prev => [...prev, itemCompleto]);
         }
     };
 
-    const handleSaveAndSend = () => {
-        // Adicionar validação de campos obrigatórios aqui
-        if (!cotacao.obra || !cotacao.dataNecessidade || !cotacao.produto || !cotacao.quantidade || !cotacao.unidadeMedida) {
-            toast.error("Por favor, preencha todos os campos obrigatórios (*).");
+    // LÓGICA PARA REMOVER ITEM DA LISTA
+    const handleRemoveItem = (insumoId) => {
+        setItens(prev => prev.filter(item => item.insumoId !== insumoId));
+    };
+
+    // LÓGICA PARA ATUALIZAR QUANTIDADE DIRETO NA LISTA
+    const handAtualizarQuantidade = (insumoId, novaQuantidade) => {
+        const valorNum = Number(novaQuantidade);
+        if (isNaN(valorNum) || valorNum <= 0) {
+            handleRemoveItem(insumoId);
+        } else {
+            // Atualiza a quantidade
+            setItens(prevItens => 
+                prevItens.map(item => 
+                    item.insumoId === insumoId ? { ...item, quantidade: valorNum } : item
+                )
+            );
+        }
+    };
+
+    // Envia a cotação em lote para o backend
+   const handleGerarCotas = async () => {
+        const obraIdNum = Number(cotacao.obraId);
+        const funcionarioIdNum = Number(cotacao.funcionarioId);
+
+        // Filtra a lista de itens para enviar apenas os que têm quantidade
+        const itensParaEnviar = itens
+            .filter(item => Number(item.quantidade) > 0)
+            .map(item => ({ 
+                insumoId: item.insumoId, // O DTO do backend só quer ID e Qtd
+                quantidade: Number(item.quantidade) 
+            }));
+
+        // Validação
+        if (!obraIdNum || obraIdNum <= 0) {
+            toast.warn("Selecione uma Obra válida.");
             return;
         }
-        console.log("Cotação a ser salva:", cotacao);
-        toast.success("Cotação salva e enviada para fornecedores!");
-    };
+        if (!funcionarioIdNum || funcionarioIdNum <= 0) {
+            toast.warn("Selecione um Funcionário Solicitante.");
+            return; 
+        }
+        if (itensParaEnviar.length === 0) {
+            toast.warn("Adicione pelo menos um insumo à cotação (definindo uma quantidade maior que 0).");
+            return;
+        }
 
-    const getStatusBadge = () => (
-        <span className="inline-flex items-center px-3 py-1 ml-4 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-            Ativo
-        </span>
-    );
+        setLoading(true);
+        
+        try {
+            // Monta o DTO final (CotacaoRequestDTO)
+            const dto = {
+                obraId: obraIdNum,
+                dataNecessidade: cotacao.dataNecessidade,
+                prioridade: cotacao.prioridade,
+                funcionarioId: funcionarioIdNum,
+                itens: itensParaEnviar // Envia a lista de itens filtrada
+            };
+
+            // --- INÍCIO DA DEPURAÇÃO ---
+            
+            console.log("===================================");
+            console.log("ENVIANDO DTO PARA /cotacoes/solicitar:");
+            console.log(JSON.stringify(dto, null, 2)); // Mostra o JSON formatado
+            console.log("===================================");
+
+            // --- FIM DA DEPURAÇÃO ---
+
+            // Esta é a linha 156 (ou próxima dela) que está falhando
+            const response = await api.post('/cotacoes/solicitar', dto);
+
+            if (response.data.success) {
+                toast.success(`${response.data.data.length} cotação(ões) gerada(s) com sucesso!`);
+                navigate(`/cotacoes`); // Volta para a lista de cotações
+            } else {
+                toast.error(response.data.message);
+            }
+        } catch (error) {
+            // O erro 400 será pego aqui
+            console.error("ERRO NA API:", error.response);
+            toast.error(error.response?.data?.message || "Erro ao gerar cotação.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     return (
         <div className="bg-gray-100 min-h-screen">
@@ -95,62 +185,55 @@ export default function CotacaoDeValores() {
             <div className="ml-64">
                 <Header />
                 <div className="p-6">
-
                     {/* Page Header */}
                     <div className="mb-8">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <h1 className="text-3xl font-bold text-cordes-blue flex items-center">
-                                    Cotação de Valores
-                                    {getStatusBadge()}
-                                </h1>
-                                <p className="text-gray-600 mt-2">
-                                    Compare preços e condições de fornecedores para otimizar o custo de suas obras
-                                </p>
-                            </div>
+                        <div>
+                            <h1 className="text-3xl font-bold text-cordes-blue flex items-center">
+                                Nova Cotação de Valores
+                            </h1>
+                            <p className="text-gray-600 mt-2">
+                                Preencha os dados gerais e adicione os insumos para a cotação automática.
+                            </p>
                         </div>
                     </div>
 
                     <div className="space-y-8">
-
-                        {/* Componente de Seleção de Modo */}
-                        <ModeSelector mode={mode} onModeChange={handleModeChange} />
-
-                        {/* Componente de Formulário */}
-                        <CotacaoForm
-                            cotacao={cotacao}
-                            handleChange={handleChange}
-                            mockObras={mockObras}
-                            mockUnidadesMedida={mockUnidadesMedida}
-                        />
-
-                        {/* Auto Mode Info */}
-                        {mode === 'auto' && (
-                            <div className="p-6 rounded-xl text-white bg-gradient-to-r from-cordes-blue to-purple-700 shadow-md">
-                                <div className="font-bold text-lg mb-2">🤖 Cotação Automática Ativada</div>
-                                <div className="text-sm opacity-90">
-                                    O sistema está analisando: categoria do produto, CEP da obra, histórico de compras e preço médio anterior para selecionar os melhores fornecedores automaticamente.
+                        {loadingData ? (
+                             <div className="text-center p-10 bg-white rounded-xl shadow-md">
+                                <i className="fas fa-spinner fa-spin text-2xl text-cordes-blue"></i>
+                                <p className="mt-2 text-gray-600">Carregando dados...</p>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Formulário de Dados Gerais */}
+                                <div className="bg-white rounded-xl shadow-md p-8">
+                                    <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">1. Informações da Solicitação</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <CotacaoForm
+                                            cotacao={cotacao}
+                                            handleChange={handleChangeGeral}
+                                            listaObras={obras}
+                                            listaFuncionarios={funcionarios}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        )}
 
-                        {/* Loading Panel */}
-                        {loading && (
-                            <div className="text-center p-10 bg-white rounded-xl shadow-md">
-                                <div className="w-12 h-12 border-4 border-gray-200 border-t-cordes-blue rounded-full animate-spin mx-auto mb-4"></div>
-                                <div className="text-gray-700 font-medium">Gerando cotações automaticamente...</div>
-                            </div>
+                                {/* Novo Componente para Lista de Insumos */}
+                                <ItensCotacaoForm 
+                                    insumosDisponiveis={insumos}
+                                    itensSelecionados={itens}
+                                    onAddItem={handleAddItem}
+                                    onRemoveItem={handleRemoveItem}
+                                    onUpdateQuantity={handAtualizarQuantidade}
+                                />
+                            </>
                         )}
-
-                        {/* Componente de Resultados */}
-                        {showResults && !loading && (
-                            <QuotationResults mockFornecedores={mockFornecedores} />
-                        )}
-
+                        
                         {/* Action Buttons */}
                         <div className="flex gap-4 pt-6 border-t justify-end">
                             <button
                                 type="button"
+                                onClick={() => navigate("/cotacoes")}
                                 className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-100 transition duration-300"
                             >
                                 <i className="fas fa-times mr-2"></i>
@@ -159,8 +242,8 @@ export default function CotacaoDeValores() {
 
                             <button
                                 type="button"
-                                onClick={handleGenerateQuote}
-                                disabled={loading}
+                                onClick={handleGerarCotas}
+                                disabled={loading || loadingData}
                                 className="px-6 py-3 bg-light-blue-800 text-white font-semibold rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:opacity-50"
                             >
                                 {loading ? (
@@ -171,19 +254,9 @@ export default function CotacaoDeValores() {
                                 ) : (
                                     <>
                                         <i className="fas fa-magic mr-2"></i>
-                                        Gerar Cotação
+                                        Gerar Cotação Automática
                                     </>
                                 )}
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={handleSaveAndSend}
-                                disabled={loading || !showResults}
-                                className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition duration-300 shadow-md disabled:opacity-50"
-                            >
-                                <i className="fas fa-envelope mr-2"></i>
-                                Salvar e Enviar para Fornecedores
                             </button>
                         </div>
                     </div>
