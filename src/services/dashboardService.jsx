@@ -76,10 +76,7 @@ const dashboardService = {
     try {
       const response = await api.get('/obras/listar');
       const obras = response.data?.data || [];
-      
-      console.log('🏗️ Response completa:', response.data); // DEBUG
-      console.log('📦 Obras extraídas:', obras); // DEBUG
-      
+    
       return obras;
     } catch (error) {
       console.error('Erro ao buscar obras:', error.response || error);

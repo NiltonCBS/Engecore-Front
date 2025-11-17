@@ -2,17 +2,18 @@ import { useState } from "react";
 import Sidebar from "../../../components/SideBar.jsx";
 import Header from "../../../components/Header.jsx";
 import { toast } from 'react-toastify';
-import { api } from "../../../services/api.js"; 
+import { api } from "../../../services/api";
 
 
 export default function CadastrarCliente() {
-  // Estado para armazenar os dados do cliente
   const [cliente, setCliente] = useState({
     nome: "",
     razaoSocial: "",
     tipoCliente: "",
     cpfCnpj: "",
     inscricaoEstadual: "",
+    rg: "",
+    dataNascimento: "",
     telefone: "",
     email: "",
     endereco: {
@@ -41,9 +42,8 @@ export default function CadastrarCliente() {
 
   // Função para buscar dados do CNPJ na API Minha Receita
   const buscarCnpj = async (cnpj) => {
-    // Remove caracteres não numéricos
     const numeros = cnpj.replace(/\D/g, '');
-    if (numeros.length !== 14) return; // Só busca se for um CNPJ completo
+    if (numeros.length !== 14) return;
 
     setCnpjLoading(true);
     try {
@@ -55,7 +55,6 @@ export default function CadastrarCliente() {
 
       const data = await response.json();
 
-      // Atualiza o estado do cliente com os dados retornados da API
       setCliente(prev => ({
         ...prev,
         nome: data.nome_fantasia || "",
@@ -75,6 +74,7 @@ export default function CadastrarCliente() {
       }));
       toast.success("Dados do CNPJ preenchidos.");
 
+      toast.success("Dados do CNPJ carregados com sucesso!");
     } catch (error) {
       console.error("Erro ao buscar CNPJ:", error);
       toast.error("Erro ao consultar o CNPJ. Verifique o número e tente novamente.");
@@ -84,9 +84,8 @@ export default function CadastrarCliente() {
   };
 
   const buscarCep = async (cep) => {
-    // Remove caracteres não numéricos
     const numeros = cep.replace(/\D/g, '');
-    if (numeros.length !== 8) return; // CEP inválido
+    if (numeros.length !== 8) return;
 
     setCepLoading(true);
     try {
@@ -109,7 +108,6 @@ export default function CadastrarCliente() {
         return;
       }
 
-      // Atualiza o estado do cliente com os dados retornados
       setCliente(prev => ({
         ...prev,
         endereco: {
@@ -118,7 +116,7 @@ export default function CadastrarCliente() {
           bairro: data.bairro || "",
           cidade: data.localidade || "",
           estado: data.uf || "",
-          cep: formatarCep(data.cep || numeros) // já formata o CEP
+          cep: formatarCep(data.cep || numeros)
         }
       }));
       toast.success("Endereço preenchido.");
@@ -171,7 +169,6 @@ export default function CadastrarCliente() {
   };
 
   const limparMascara = (valor) => (valor || "").replace(/\D/g, "");
-
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -232,7 +229,7 @@ export default function CadastrarCliente() {
     try {
       console.log("Enviando payload:", payload);
       const response = await api.post("/cliente/cadastrar", payload, { withCredentials: true });
-       toast.success("Cliente cadastrado com sucesso!");
+      toast.success("Cliente cadastrado com sucesso!");
       console.log("Resposta do servidor:", response.data);
       limparCampos();
     
@@ -281,7 +278,6 @@ export default function CadastrarCliente() {
     }
   };
 
-
   const limparCampos = () => {
     setCliente({
       nome: "",
@@ -289,6 +285,8 @@ export default function CadastrarCliente() {
       tipoCliente: "",
       cpfCnpj: "",
       inscricaoEstadual: "",
+      rg: "",
+      dataNascimento: "",
       telefone: "",
       email: "",
       endereco: {
@@ -341,8 +339,7 @@ export default function CadastrarCliente() {
 
   // Handler para o evento onBlur do campo CNPJ
   const handleCnpjBlur = (e) => {
-    // Apenas busca se for Pessoa Jurídica ou MEI
-    if (cliente.tipoCliente.includes("Jurídica") || cliente.tipoCliente.includes("MEI")) {
+    if (cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") {
       buscarCnpj(e.target.value);
     }
   };
@@ -389,7 +386,6 @@ export default function CadastrarCliente() {
       buscarCep(valor);
     }
   };
-
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -472,6 +468,34 @@ export default function CadastrarCliente() {
                   </div>
 
                   {(cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") && (
+                    <div className="md:col-span-2">
+                      <label className="block text-gray-700 font-medium mb-2">Razão Social</label>
+                      <input
+                        type="text"
+                        name="razaoSocial"
+                        value={cliente.razaoSocial}
+                        onChange={handleChange}
+                        placeholder="Razão Social da empresa"
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
+                      />
+                    </div>
+                  )}
+
+                  {(cliente.tipoCliente === "Pessoa Jurídica" || cliente.tipoCliente === "Microempreendedor Individual (MEI)") && (
+                    <div>
+                      <label className="block text-gray-700 font-medium mb-2">Inscrição Estadual</label>
+                      <input
+                        type="text"
+                        name="inscricaoEstadual"
+                        value={cliente.inscricaoEstadual}
+                        onChange={handleChange}
+                        placeholder="Inscrição Estadual"
+                        className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
+                      />
+                    </div>
+                  )}
+
+                  {cliente.tipoCliente === "Pessoa Física" && (
                     <>
                       <div className="md:col-span-2">
                         <label className="block text-gray-700 font-medium mb-2">Razão Social</label>
@@ -485,13 +509,23 @@ export default function CadastrarCliente() {
                         />
                       </div>
                       <div>
-                        <label className="block text-gray-700 font-medium mb-2">Inscrição Estadual</label>
+                        <label className="block text-gray-700 font-medium mb-2">RG</label>
                         <input
                           type="text"
-                          name="inscricaoEstadual"
-                          value={cliente.inscricaoEstadual}
+                          name="rg"
+                          value={cliente.rg}
                           onChange={handleChange}
-                          placeholder="Inscrição Estadual"
+                          placeholder="00.000.000-0"
+                          className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-gray-700 font-medium mb-2">Data de Nascimento</label>
+                        <input
+                          type="date"
+                          name="dataNascimento"
+                          value={cliente.dataNascimento}
+                          onChange={handleChange}
                           className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
                         />
                       </div>
