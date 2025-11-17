@@ -35,6 +35,11 @@ import GerenciarMarcas from './pages/Dashboard/Marcas/gerenciarmarcas.jsx';
 // NOVA IMPORTAÇÃO
 import RelatoriosPage from './pages/Dashboard/relatorios.jsx';
 
+import ListarFuncionarios from './pages/Dashboard/Funcionario/listarfuncionario.jsx';
+import CadastrarFuncionario from './pages/Dashboard/Funcionario/cadastrarcliente.jsx'; 
+import ModalEditarFuncionario from './pages/Dashboard/Funcionario/modalfuncionario.jsx';
+
+
 
 function App() {
 
@@ -66,6 +71,8 @@ function App() {
         <Route path="/produtos/estoque" element={<Estoque />} />
         <Route path="/users/adicionar" element={<CadCliente />} />
         <Route path="/users/listar" element={<ListarCliente />} />
+        <Route path="/funcionario/adicionar" element={<CadastrarFuncionario />} />
+        <Route path="/funcionario/listar" element={<ListarFuncionarios />} />
         <Route path="/obras/adicionar" element={<CadastrarObra />} />
         <Route path="/obras/listar" element={<ListarObra />} />
 

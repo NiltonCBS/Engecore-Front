@@ -12,6 +12,7 @@ export default function Sidebar() {
     const navigate = useNavigate();
     const [isProdutosOpen, setIsProdutosOpen] = useState(false);
     const [isUsersOpen, setIsUsersOpen] = useState(false);
+    const [isFuncOpen, setIsFuncOpen] = useState(false);
     const [isObrasOpen, setIsObrasOpen] = useState(false);
     const [isFornecedoresOpen, setIsFornecedoresOpen] = useState(false); 
     const [isEstoqueOpen, setIsEstoqueOpen] = useState(false);
@@ -34,6 +35,7 @@ export default function Sidebar() {
     // Funções para alternar menus
     const toggleProdutos = () => setIsProdutosOpen(!isProdutosOpen);
     const toggleUsers = () => setIsUsersOpen(!isUsersOpen);
+    const toggleFunc = () => setIsFuncOpen(!isFuncOpen);
     const toggleObras = () => setIsObrasOpen(!isObrasOpen);
     const toggleFornecedores = () => setIsFornecedoresOpen(!isFornecedoresOpen); 
     const toggleCotacoes = () => setIsCotacoesOpen(!isCotacoesOpen);
@@ -113,6 +115,30 @@ export default function Sidebar() {
                             <NavLink to="/users/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
                                 Adicionar Cliente
+                            </NavLink>
+                        </div>
+                    </div>
+
+                    <div>
+                        <button
+                            type="button"
+                            onClick={toggleFunc}
+                            className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
+                        >
+                            <div className="flex items-center">
+                                <i className="fas fa-users mr-3 group-hover:text-white"></i>
+                                Funcionarios
+                            </div>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFuncOpen ? "rotate-180" : ""}`}></i>
+                        </button>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFuncOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/funcionario/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-list mr-3"></i>
+                                Lista de Funcionarios
+                            </NavLink>
+                            <NavLink to="/funcionario/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-plus mr-3"></i>
+                                Adicionar Funcionario
                             </NavLink>
                         </div>
                     </div>
