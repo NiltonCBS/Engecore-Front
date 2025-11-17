@@ -23,6 +23,19 @@ import CotacaoDeValores from './pages/Dashboard/Cotacoes/CotacaoDeValores.jsx';
 import MostrarCotacao from './pages/Dashboard/Cotacoes/MostrarCotacao.jsx';
 import ListarCotacoes from './pages/Dashboard/Cotacoes/ListarCotacoes.jsx';
 
+// Importações de Fornecedor
+import CadastrarFornecedor from './pages/Dashboard/Fornecedores/cadastrarfornecedor.jsx';
+import ListarFornecedores from './pages/Dashboard/Fornecedores/listarfornecedor.jsx';
+import CadastrarProdutoFornecedor from './pages/Dashboard/Fornecedores/cadastrarprodutofornecedor.jsx';
+import ListarProdutosFornecedor from './pages/Dashboard/Fornecedores/listarprodutosfornecedor.jsx';
+
+// Importação de Marcas
+import GerenciarMarcas from './pages/Dashboard/Marcas/gerenciarmarcas.jsx';
+
+// NOVA IMPORTAÇÃO
+import RelatoriosPage from './pages/Dashboard/relatorios.jsx';
+
+
 function App() {
 
 
@@ -44,6 +57,10 @@ function App() {
         <Route path="/" element={<SingIn />} />
         <Route path="/register" element={<SingUp />} />
         <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* NOVA ROTA DE RELATÓRIOS */}
+        <Route path="/relatorios" element={<RelatoriosPage />} />
+
         <Route path="/produtos/adicionar" element={<Produtos />} />
         <Route path="/produtos/listar" element={<ListarProdutos />} />
         <Route path="/produtos/estoque" element={<Estoque />} />
@@ -51,6 +68,16 @@ function App() {
         <Route path="/users/listar" element={<ListarCliente />} />
         <Route path="/obras/adicionar" element={<CadastrarObra />} />
         <Route path="/obras/listar" element={<ListarObra />} />
+
+        {/* Rotas de Fornecedores */}
+        <Route path="/fornecedores/adicionar" element={<CadastrarFornecedor />} />
+        <Route path="/fornecedores/listar" element={<ListarFornecedores />} />
+        <Route path="/fornecedores/produtos/vincular" element={<CadastrarProdutoFornecedor />} />
+        <Route path="/fornecedores/produtos/listar" element={<ListarProdutosFornecedor />} />
+
+        {/* Rota de Marcas */}
+        <Route path="/marcas" element={<GerenciarMarcas />} />
+
         <Route path="/financeiro/adicionar" element={<CadastrarMovimentacaoFinanceira />} />
         <Route path="/financeiro/listar" element={<ListarMovimentacoesFinanceira />} />
         <Route path="/estoque/adicionar" element={<CadastrarMovimentacaoEstoque />} />

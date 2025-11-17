@@ -13,7 +13,7 @@ export default function Sidebar() {
     const [isProdutosOpen, setIsProdutosOpen] = useState(false);
     const [isUsersOpen, setIsUsersOpen] = useState(false);
     const [isObrasOpen, setIsObrasOpen] = useState(false);
-    const [isFonecedoresOpen, setIsFonecedoresOpen] = useState(false);
+    const [isFornecedoresOpen, setIsFornecedoresOpen] = useState(false); 
     const [isEstoqueOpen, setIsEstoqueOpen] = useState(false);
     const [isFinanceiroOpen, setIsFinanceiroOpen] = useState(false);
     const [isCotacoesOpen, setIsCotacoesOpen] = useState(false);
@@ -21,19 +21,21 @@ export default function Sidebar() {
     // Atualiza o estado dos menus com base na rota atual
     useEffect(() => {
         const path = location.pathname;
-        setIsProdutosOpen(path.startsWith('/produtos'));
+        setIsProdutosOpen(path.startsWith('/produtos') || path.startsWith('/marcas'));
         setIsUsersOpen(path.startsWith('/users'));
         setIsObrasOpen(path.startsWith('/obras'));
+        setIsFornecedoresOpen(path.startsWith('/fornecedores')); 
         setIsEstoqueOpen(path.startsWith('/estoque'));
         setIsFinanceiroOpen(path.startsWith('/financeiro'));
         setIsCotacoesOpen(path.startsWith('/cotacoes'));
+        // Não é necessário um estado para Relatórios, pois é um link direto
     }, [location.pathname]);
 
     // Funções para alternar menus
     const toggleProdutos = () => setIsProdutosOpen(!isProdutosOpen);
     const toggleUsers = () => setIsUsersOpen(!isUsersOpen);
     const toggleObras = () => setIsObrasOpen(!isObrasOpen);
-    const toggleFonecedores = () => setIsFonecedoresOpen(!isFonecedoresOpen);
+    const toggleFornecedores = () => setIsFornecedoresOpen(!isFornecedoresOpen); 
     const toggleCotacoes = () => setIsCotacoesOpen(!isCotacoesOpen);
     const toggleEstoque = () => setIsEstoqueOpen(!isEstoqueOpen);
     const toggleFinanceiro = () => setIsFinanceiroOpen(!isFinanceiroOpen);
@@ -74,6 +76,20 @@ export default function Sidebar() {
                     >
                         <i className="fas fa-home mr-3 group-hover:text-white"></i>
                         Dashboard
+                    </NavLink>
+
+                    {/* NOVO LINK DE RELATÓRIOS */}
+                    <NavLink
+                        to="/relatorios"
+                        className={({ isActive }) =>
+                            `flex items-center px-4 py-3 rounded-lg transition-colors group ${isActive
+                                ? "bg-gray-700 text-white"
+                                : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                            }`
+                        }
+                    >
+                        <i className="fas fa-file-pdf mr-3 group-hover:text-white"></i>
+                        Relatórios
                     </NavLink>
 
                     {/* Menu Clientes */}
@@ -125,32 +141,41 @@ export default function Sidebar() {
                             </NavLink>
                         </div>
                     </div>
-                    {/* Menu Fonecedores */}
+                    
+                    {/* Menu Fornecedores (ATUALIZADO) */}
                     <div>
                         <button
                             type="button"
-                            onClick={toggleFonecedores}
+                            onClick={toggleFornecedores}
                             className="flex items-center justify-between w-full px-4 py-3 rounded-lg transition-colors group text-gray-300 hover:bg-gray-700 hover:text-white"
                         >
                             <div className="flex items-center">
-                                <i className="fas fa-building mr-3 group-hover:text-white"></i>
-                                Fonecedores
+                                <i className="fas fa-truck mr-3 group-hover:text-white"></i>
+                                Fornecedores
                             </div>
-                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFonecedoresOpen ? "rotate-180" : ""}`}></i>
+                            <i className={`fas fa-chevron-down transition-transform duration-200 ${isFornecedoresOpen ? "rotate-180" : ""}`}></i>
                         </button>
-                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFonecedoresOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
-                            <NavLink to="/obras/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                        <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isFornecedoresOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
+                            <NavLink to="/fornecedores/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-list mr-3"></i>
-                                Lista de Fonecedores
+                                Lista de Fornecedores
                             </NavLink>
-                            <NavLink to="/obras/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                            <NavLink to="/fornecedores/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
-                                Adicionar Fonecedores
+                                Adicionar Fornecedor
+                            </NavLink>
+                            <NavLink to="/fornecedores/produtos/vincular" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-link mr-3"></i>
+                                Vincular Produto
+                            </NavLink>
+                            <NavLink to="/fornecedores/produtos/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-tags mr-3"></i>
+                                Listar Produtos
                             </NavLink>
                         </div>
                     </div>
 
-                    {/* Menu Produtos */}
+                    {/* Menu Produtos (Catálogo) ATUALIZADO */}
                     <div>
                         <button
                             type="button"
@@ -159,18 +184,23 @@ export default function Sidebar() {
                         >
                             <div className="flex items-center">
                                 <i className="fas fa-box mr-3 group-hover:text-white"></i>
-                                Produtos
+                                Catálogo (Insumos)
                             </div>
                             <i className={`fas fa-chevron-down transition-transform duration-200 ${isProdutosOpen ? "rotate-180" : ""}`}></i>
                         </button>
                         <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isProdutosOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
                             <NavLink to="/produtos/listar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-list mr-3"></i>
-                                Lista de Produtos
+                                Lista de Insumos
                             </NavLink>
                             <NavLink to="/produtos/adicionar" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
-                                Adicionar Produto
+                                Adicionar Insumo
+                            </NavLink>
+                            {/* NOVO LINK DE MARCAS */}
+                            <NavLink to="/marcas" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
+                                <i className="fas fa-bookmark mr-3"></i>
+                                Gerenciar Marcas
                             </NavLink>
                          
                         </div>
@@ -226,7 +256,7 @@ export default function Sidebar() {
                         </div>
                     </div>
 
-                    {/* Menu Cotações (CORRIGIDO) */}
+                    {/* Menu Cotações */}
                     <div>
                         <button
                             type="button"
@@ -240,12 +270,10 @@ export default function Sidebar() {
                             <i className={`fas fa-chevron-down transition-transform duration-200 ${isCotacoesOpen ? "rotate-180" : ""}`}></i>
                         </button>
                         <div className={`ml-4 mt-2 space-y-1 transition-all duration-200 overflow-hidden ${isCotacoesOpen ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}>
-                            {/* Link 1: Lista de Cotações (agora em /cotacoes) */}
                             <NavLink to="/cotacoes" end className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-list-alt mr-3"></i>
                                 Listar Cotações
                             </NavLink>
-                            {/* Link 2: Nova Cotação (nova rota) */}
                             <NavLink to="/cotacoes/nova" className={({ isActive }) => `flex items-center px-4 py-2 rounded-lg transition-colors text-sm ${isActive ? "bg-gray-600 text-white" : "text-gray-400 hover:bg-gray-600 hover:text-white"}`}>
                                 <i className="fas fa-plus mr-3"></i>
                                 Nova Cotação
