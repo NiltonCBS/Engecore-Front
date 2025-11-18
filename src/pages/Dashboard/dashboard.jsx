@@ -6,7 +6,7 @@ import OrdersTable from "../../components/OrdersTable";
 import Footer from "../../components/Footer";
 import dashboardService from "../../services/dashboardService";
 import { useState, useEffect } from "react";
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { Line, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -40,6 +40,9 @@ export default function Dashboard() {
   const [obras, setObras] = useState([]);
   const [obrasConcluidas, setObrasConcluidas] = useState([]);
   const [cotacoesAbertas, setCotacoesAbertas] = useState([]);
+  const [estoqueCritico, setEstoqueCritico] = useState([]);
+  const [produtosCadastrados, setProdutosCadastrados] = useState(0);
+  const [movimentacoesEstoque, setMovimentacoesEstoque] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -50,7 +53,16 @@ export default function Dashboard() {
         setError(null);
         
         // Carrega todos os dados em paralelo para melhor performance
-        const [movData, clientesData, obrasData, obrasConcluidasData, cotacoesAbertasData] = await Promise.all([
+        const [
+          movData, 
+          clientesData, 
+          obrasData, 
+          obrasConcluidasData, 
+          cotacoesAbertasData, 
+          estoqueCriticoData,
+          estoqueData,
+          movEstoqueData
+        ] = await Promise.all([
           dashboardService.getMovimentacoes().catch(err => {
             console.error("Erro ao carregar movimentações:", err);
             return [];
@@ -70,11 +82,22 @@ export default function Dashboard() {
           dashboardService.getCotacoesAbertas().catch(err => {
             console.error("Erro ao carregar cotações abertas:", err);
             return [];
+          }),
+          dashboardService.getEstoqueCritico().catch(err => {
+            console.error("Erro ao carregar estoque crítico:", err);
+            return [];
+          }),
+          dashboardService.getEstoque().catch(err => {
+            console.error("Erro ao carregar estoque:", err);
+            return { quantidade: 0, produtos: [] };
+          }),
+          dashboardService.getMovimentacoesEstoque().catch(err => {
+            console.error("Erro ao carregar movimentações de estoque:", err);
+            return [];
           })
         ]);
 
         // Processa movimentações - garante array de 12 meses
-        // A service já retorna os dados agrupados por mês com receita/despesa separados
         const movimentacoesArray = Array.isArray(movData) ? movData : [];
         const movimentacoesFormatadas = Array.from({ length: 12 }, (_, i) => {
           const mes = i + 1;
@@ -103,7 +126,24 @@ export default function Dashboard() {
                                           ? cotacoesAbertasData.cotacoes
                                           : [];
 
+        const estoqueCriticoProcessados = Array.isArray(estoqueCriticoData)
+                                          ? estoqueCriticoData
+                                          : [];
 
+        // Processa produtos cadastrados
+        const quantidadeProdutos = Number(estoqueData?.quantidade) || 0;
+
+        // Processa movimentações de estoque - garante array de 12 meses
+        const movEstoqueArray = Array.isArray(movEstoqueData) ? movEstoqueData : [];
+        const movEstoqueFormatadas = Array.from({ length: 12 }, (_, i) => {
+          const mes = i + 1;
+          const dado = movEstoqueArray.find(m => Number(m.mes) === mes);
+          return {
+            mes,
+            entradas: dado ? Number(dado.entradas) || 0 : 0,
+            saidas: dado ? Number(dado.saidas) || 0 : 0
+          };
+        });
 
         // Atualiza estados
         setMovimentacoes(movimentacoesFormatadas);
@@ -111,7 +151,9 @@ export default function Dashboard() {
         setObras(obrasProcessadas);
         setObrasConcluidas(obrasConcluidasProcessadas);
         setCotacoesAbertas(cotacoesAbertasProcessadas);
-
+        setEstoqueCritico(estoqueCriticoProcessados);
+        setProdutosCadastrados(quantidadeProdutos);
+        setMovimentacoesEstoque(movEstoqueFormatadas);
       } catch (error) {
         console.error("Erro crítico ao carregar dados do dashboard:", error);
         setError("Erro ao carregar dados. Por favor, recarregue a página.");
@@ -126,6 +168,13 @@ export default function Dashboard() {
         setObras([]);
         setObrasConcluidas([]);
         setCotacoesAbertas([]);
+        setEstoqueCritico([]);
+        setProdutosCadastrados(0);
+        setMovimentacoesEstoque(Array.from({ length: 12 }, (_, i) => ({
+          mes: i + 1,
+          entradas: 0,
+          saidas: 0
+        })));
       } finally {
         setLoading(false);
       }
@@ -141,15 +190,19 @@ export default function Dashboard() {
     : 0;
     
   const totalObras = obras.length;
-
   const ObrasConcluidas = obrasConcluidas.length;
-
   const cotacoesAbertasDados = cotacoesAbertas.length;
+  const estoqueCriticoDados = estoqueCritico.length;
   
   // Calcula receita e despesa total
   const receitaTotal = movimentacoes.reduce((acc, m) => acc + m.receita, 0);
   const despesaTotal = movimentacoes.reduce((acc, m) => acc + m.despesa, 0);
   const saldoTotal = receitaTotal - despesaTotal;
+
+  // Calcula totais de movimentações de estoque
+  const totalEntradas = movimentacoesEstoque.reduce((acc, m) => acc + m.entradas, 0);
+  const totalSaidas = movimentacoesEstoque.reduce((acc, m) => acc + m.saidas, 0);
+  const saldoEstoque = totalEntradas - totalSaidas;
 
   // Dados para gráfico de Movimentações Financeiras
   const movimentacoesData = {
@@ -193,16 +246,25 @@ export default function Dashboard() {
     ],
   };
 
-  // Dados para gráfico de Produtos por Categoria (mock - substituir por dados reais)
-  const produtosCategoriaData = {
-    labels: ['Cimento', 'Tijolos', 'Areia/Brita', 'Ferro', 'Madeira', 'Tintas', 'Hidráulica'],
+  // NOVO: Dados para gráfico de Movimentações de Estoque
+  const movimentacoesEstoqueData = {
+    labels: movimentacoesEstoque.map(m => `Mês ${m.mes}`),
     datasets: [
       {
-        label: 'Quantidade em Estoque',
-        data: [150, 25, 80, 45, 30, 65, 90],
-        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+        label: 'Entradas',
+        data: movimentacoesEstoque.map(m => m.entradas),
         borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 2,
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        fill: true,
+        tension: 0.4,
+      },
+      {
+        label: 'Saídas',
+        data: movimentacoesEstoque.map(m => m.saidas),
+        borderColor: 'rgb(249, 115, 22)',
+        backgroundColor: 'rgba(249, 115, 22, 0.1)',
+        fill: true,
+        tension: 0.4,
       },
     ],
   };
@@ -291,19 +353,42 @@ export default function Dashboard() {
     },
   };
 
-  const produtosOptions = {
+  // NOVO: Opções para gráfico de estoque
+  const estoqueOptions = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          padding: 15,
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        }
+      },
+      title: {
         display: false,
       },
       tooltip: {
         backgroundColor: 'rgba(0, 0, 0, 0.8)',
         padding: 12,
+        titleFont: {
+          size: 14,
+        },
+        bodyFont: {
+          size: 13,
+        },
         callbacks: {
           label: function(context) {
-            return context.label + ': ' + context.parsed.y + ' unidades';
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            label += context.parsed.y.toLocaleString('pt-BR') + ' unidades';
+            return label;
           }
         }
       },
@@ -312,7 +397,9 @@ export default function Dashboard() {
       y: {
         beginAtZero: true,
         ticks: {
-          stepSize: 25,
+          callback: function(value) {
+            return value.toLocaleString('pt-BR') + ' un';
+          }
         }
       },
     },
@@ -385,9 +472,9 @@ export default function Dashboard() {
             />
             <StatCard 
               title="Produtos Cadastrados" 
-              value="485" 
+              value={produtosCadastrados} 
               icon="fa-box" 
-              percent="+5.3%" 
+              percent="100%" 
               color="bg-purple-50 text-purple-600 border-purple-200" 
             />
           </div>
@@ -444,14 +531,34 @@ export default function Dashboard() {
 
           {/* Segunda Linha de Gráficos */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gráfico de Produtos por Categoria */}
+            {/* NOVO: Gráfico de Movimentações de Estoque */}
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-              <div className="mb-4">
-                <h3 className="text-lg font-bold text-gray-900">Estoque por Categoria</h3>
-                <p className="text-sm text-gray-500">Principais categorias de produtos</p>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Movimentações de Estoque</h3>
+                  <p className="text-sm text-gray-500">Entradas vs Saídas (2024)</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                    saldoEstoque >= 0 
+                      ? 'bg-blue-100 text-blue-700' 
+                      : 'bg-orange-100 text-orange-700'
+                  }`}>
+                    Saldo: {saldoEstoque >= 0 ? '+' : ''}{saldoEstoque.toLocaleString('pt-BR')} un
+                  </span>
+                </div>
               </div>
               <div style={{ height: '280px' }}>
-                <Bar data={produtosCategoriaData} options={produtosOptions} />
+                {totalEntradas === 0 && totalSaidas === 0 ? (
+                  <div className="flex items-center justify-center h-full text-gray-400">
+                    <div className="text-center">
+                      <i className="fas fa-boxes text-3xl mb-2"></i>
+                      <p className="text-sm">Nenhuma movimentação registrada</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Line data={movimentacoesEstoqueData} options={estoqueOptions} />
+                )}
               </div>
             </div>
 
@@ -495,7 +602,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-amber-600 mb-1">Estoque Crítico</p>
-                  <p className="text-3xl font-bold text-amber-900">3</p>
+                  <p className="text-3xl font-bold text-amber-900">{estoqueCriticoDados}</p>
                   <p className="text-xs text-amber-700 mt-2">Produtos abaixo do mínimo</p>
                 </div>
                 <div className="bg-amber-200 p-4 rounded-full">
