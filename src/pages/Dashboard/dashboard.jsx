@@ -38,6 +38,8 @@ export default function Dashboard() {
   const [movimentacoes, setMovimentacoes] = useState([]);
   const [clientesStatus, setClientesStatus] = useState({ ativos: 0, inativos: 0 });
   const [obras, setObras] = useState([]);
+  const [obrasConcluidas, setObrasConcluidas] = useState([]);
+  const [cotacoesAbertas, setCotacoesAbertas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -48,7 +50,7 @@ export default function Dashboard() {
         setError(null);
         
         // Carrega todos os dados em paralelo para melhor performance
-        const [movData, clientesData, obrasData] = await Promise.all([
+        const [movData, clientesData, obrasData, obrasConcluidasData, cotacoesAbertasData] = await Promise.all([
           dashboardService.getMovimentacoes().catch(err => {
             console.error("Erro ao carregar movimentações:", err);
             return [];
@@ -61,6 +63,14 @@ export default function Dashboard() {
             console.error("Erro ao carregar obras:", err);
             return [];
           }),
+          dashboardService.getObrasConcluidas().catch(err => {
+            console.error("Erro ao carregar obras concluídas:", err);
+            return [];
+          }),
+          dashboardService.getCotacoesAbertas().catch(err => {
+            console.error("Erro ao carregar cotações abertas:", err);
+            return [];
+          })
         ]);
 
         // Processa movimentações - garante array de 12 meses
@@ -85,10 +95,22 @@ export default function Dashboard() {
         // Processa obras - garante array
         const obrasProcessadas = Array.isArray(obrasData) ? obrasData : [];
 
+        const obrasConcluidasProcessadas = Array.isArray(obrasConcluidasData?.obras)
+                                          ? obrasConcluidasData.obras
+                                          : [];
+
+        const cotacoesAbertasProcessadas = Array.isArray(cotacoesAbertasData?.cotacoes)
+                                          ? cotacoesAbertasData.cotacoes
+                                          : [];
+
+
+
         // Atualiza estados
         setMovimentacoes(movimentacoesFormatadas);
         setClientesStatus(clientesProcessados);
         setObras(obrasProcessadas);
+        setObrasConcluidas(obrasConcluidasProcessadas);
+        setCotacoesAbertas(cotacoesAbertasProcessadas);
 
       } catch (error) {
         console.error("Erro crítico ao carregar dados do dashboard:", error);
@@ -102,6 +124,8 @@ export default function Dashboard() {
         })));
         setClientesStatus({ ativos: 0, inativos: 0 });
         setObras([]);
+        setObrasConcluidas([]);
+        setCotacoesAbertas([]);
       } finally {
         setLoading(false);
       }
@@ -117,6 +141,10 @@ export default function Dashboard() {
     : 0;
     
   const totalObras = obras.length;
+
+  const ObrasConcluidas = obrasConcluidas.length;
+
+  const cotacoesAbertasDados = cotacoesAbertas.length;
   
   // Calcula receita e despesa total
   const receitaTotal = movimentacoes.reduce((acc, m) => acc + m.receita, 0);
@@ -453,8 +481,8 @@ export default function Dashboard() {
             <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-md border border-blue-200 p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-blue-600 mb-1">Cotações Ativas</p>
-                  <p className="text-3xl font-bold text-blue-900">8</p>
+                  <p className="text-sm font-medium text-blue-600 mb-1">Cotações Abertas</p>
+                  <p className="text-3xl font-bold text-blue-900">{cotacoesAbertasDados}</p>
                   <p className="text-xs text-blue-700 mt-2">Aguardando aprovação</p>
                 </div>
                 <div className="bg-blue-200 p-4 rounded-full">
@@ -480,7 +508,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-emerald-600 mb-1">Obras Concluídas</p>
-                  <p className="text-3xl font-bold text-emerald-900">28</p>
+                  <p className="text-3xl font-bold text-emerald-900">{ObrasConcluidas}</p>
                   <p className="text-xs text-emerald-700 mt-2">No último ano</p>
                 </div>
                 <div className="bg-emerald-200 p-4 rounded-full">

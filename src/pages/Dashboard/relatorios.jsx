@@ -61,6 +61,7 @@ export default function RelatoriosPage() {
         }
       } catch (error) {
         toast.error("Falha ao buscar obras.");
+        console.error("Erro ao carregar obras:", error);
       } finally {
         setLoadingObras(false);
       }

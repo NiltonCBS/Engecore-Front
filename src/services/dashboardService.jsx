@@ -84,6 +84,46 @@ const dashboardService = {
     }
   },
 
+  async getObrasConcluidas() {
+    try {
+      const response = await api.get('/obras/listar');
+      const obras = response.data?.data || [];
+      
+      // Filtra apenas obras com status CONCLUIDA
+      const obrasConcluidas = obras.filter(obra => obra.status === 'CONCLUIDA');
+
+      console.log('Obras concluídas encontradas:', obrasConcluidas.length);
+      
+      return {
+        quantidade: obrasConcluidas.length,
+        obras: obrasConcluidas
+      };
+    } catch (error) {
+      console.error('Erro ao buscar obras concluídas:', error.response || error);
+      return { quantidade: 0, obras: [] };
+    }
+  },
+
+  async getCotacoesAbertas() {
+    try {
+      const response = await api.get('/cotacoes/listar');
+      const cotacoes = response.data?.data || [];
+      
+      // Filtra apenas obras com status CONCLUIDA
+      const cotacoesAbertas = cotacoes.filter(cotacao => cotacao.status === 'ABERTA');
+
+      console.log('cotacoes abertas encontradas:', cotacoesAbertas.length);
+      
+      return {
+        quantidadeCotacoes: cotacoesAbertas.length,
+        cotacoes: cotacoesAbertas
+      };
+    } catch (error) {
+      console.error('Erro ao buscar obras concluídas:', error.response || error);
+      return { quantidadeCotacoes: 0, cotacoes: [] };
+    }
+  },
+
   // Nova função: Agrupa obras por mês de criação
   async getObrasPorMes() {
     try {
