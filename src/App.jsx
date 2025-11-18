@@ -37,9 +37,10 @@ import RelatoriosPage from './pages/Dashboard/relatorios.jsx';
 
 import ListarFuncionarios from './pages/Dashboard/Funcionario/listarfuncionario.jsx';
 import CadastrarFuncionario from './pages/Dashboard/Funcionario/cadastrarcliente.jsx'; 
-import ModalEditarFuncionario from './pages/Dashboard/Funcionario/modalfuncionario.jsx';
-
-
+import CadastrarEstoque from './pages/Dashboard/Estoque/cadastrarEstoque.jsx';
+import ListarEstoque from './pages/Dashboard/Estoque/listaEstoque.jsx';
+import ListarProdutosPorEstoque from './pages/Dashboard/Estoque/listarProdutosPorEstoque.jsx';
+import GerenciarFases from './pages/Dashboard/Obras/gerenciarFases.jsx';
 
 function App() {
 
@@ -75,6 +76,7 @@ function App() {
         <Route path="/funcionario/listar" element={<ListarFuncionarios />} />
         <Route path="/obras/adicionar" element={<CadastrarObra />} />
         <Route path="/obras/listar" element={<ListarObra />} />
+        <Route path="/obras/fases" element={<GerenciarFases />} />
 
         {/* Rotas de Fornecedores */}
         <Route path="/fornecedores/adicionar" element={<CadastrarFornecedor />} />
@@ -89,6 +91,9 @@ function App() {
         <Route path="/financeiro/listar" element={<ListarMovimentacoesFinanceira />} />
         <Route path="/estoque/adicionar" element={<CadastrarMovimentacaoEstoque />} />
         <Route path="/estoque/listar" element={<ListarMovimentacaoEstoque />} />
+        <Route path="/estoque/cadastrar" element={<CadastrarEstoque />} />
+        <Route path="/estoque/listar-estoques" element={<ListarEstoque />} />
+        <Route path="/estoque/produtos-por-estoque" element={<ListarProdutosPorEstoque />} />
         <Route path="/cotacoes" element={<ListarCotacoes />} />
         <Route path="/cotacoes/nova" element={<CotacaoDeValores />} />
         <Route path="/cotacoes/detalhes/:id" element={<MostrarCotacao />} />

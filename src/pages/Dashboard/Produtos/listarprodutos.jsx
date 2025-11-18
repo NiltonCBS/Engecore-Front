@@ -210,20 +210,6 @@ export default function ListarProdutos() {
                     ))}
                   </select>
                 </div>
-
-                <div className="flex items-center pt-8">
-                  <input
-                    type="checkbox"
-                    name="estoqueMinimo"
-                    checked={filtro.estoqueMinimo}
-                    onChange={handleFiltroChange}
-                    disabled
-                    className="h-4 w-4 text-cordes-blue border-gray-300 rounded mr-3"
-                  />
-                  <label className="text-gray-700 font-medium">
-                    Apenas produtos com estoque baixo (Não disponível)
-                  </label>
-                </div>
               </div>
             </div>
 

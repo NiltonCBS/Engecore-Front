@@ -4,6 +4,7 @@ import { api } from '../../../services/api';
 import Sidebar from '../../../components/SideBar';
 import Header from '../../../components/Header';
 import ModalEditarMovEstoque from '../../../components/ModalEditarMovEstoque';
+import { NavLink } from 'react-router-dom'; // PASSO 1: Importar o NavLink
 
 export default function ListarMovimentacaoEstoque() {
     const [movimentacoes, setMovimentacoes] = useState([]);
@@ -29,26 +30,26 @@ export default function ListarMovimentacaoEstoque() {
 
             console.log("Resposta da API:", response.data); // Debug
 
-            // A API retorna diretamente um array de MovEstoqueResponse
             let dados = response.data;
             
-            // Se vier com wrapper success/data
             if (response.data.success && response.data.data) {
                 dados = response.data.data;
             }
 
-            // Se não for array, tenta acessar diretamente
             if (!Array.isArray(dados)) {
                 console.error("Formato inesperado:", dados);
                 toast.error("Formato de dados inválido recebido da API");
                 return;
             }
 
+            // O mapeamento já parecia correto, assumindo que a API envia os nomes
             const movMapeados = dados.map(mov => ({
                 id: mov.id,
                 material: mov.material,
-                estoqueOrigem: mov.estoqueOrigem,
-                estoqueDestino: mov.estoqueDestino,
+                estoqueOrigem: mov.estoqueOrigem, // Assumindo que isto é o NOME (ex: "Almoxarifado")
+                estoqueDestino: mov.estoqueDestino, // Assumindo que isto é o NOME (ex: "Obra X")
+                nomeOrigem: mov.nomeOrigem, // Assumindo que isto é o NOME (ex: "Almoxarifado")
+                nomeDestino: mov.nomeDestino, // Assumindo que isto é o NOME (ex: "Obra X")
                 quantidade: mov.quantidade,
                 tipoMov: mov.tipoMov,
                 dataMovimentacao: mov.dataMovimentacao,
@@ -58,7 +59,8 @@ export default function ListarMovimentacaoEstoque() {
             }));
             
             setMovimentacoes(movMapeados);
-            toast.success(`${movMapeados.length} movimentações carregadas`);
+            // Removido o toast de sucesso daqui para não poluir a tela
+            // toast.success(`${movMapeados.length} movimentações carregadas`);
         } catch (error) {
             console.error("Erro ao buscar dados:", error);
             console.error("Detalhes do erro:", error.response?.data);
@@ -79,6 +81,7 @@ export default function ListarMovimentacaoEstoque() {
 
     const handleSalvarEdicao = async (movimentacaoEditada) => {
         try {
+            // ... (Lógica de salvar edição - sem alterações)
             const payload = {
                 tipoMov: movimentacaoEditada.tipoMov,
                 insumoId: movimentacaoEditada.insumoId,
@@ -90,15 +93,13 @@ export default function ListarMovimentacaoEstoque() {
                 dataMovimentacao: movimentacaoEditada.dataMovimentacao,
                 funcionarioId: movimentacaoEditada.funcionarioResponsavel
             };
-
             const response = await api.put(
                 `/movEstoque/alterar/${movimentacaoEditada.id}`, 
                 payload,
                 { withCredentials: true }
             );
-
             if (response.data) {
-                await fetchMovimentacoes(); // Recarrega a lista
+                await fetchMovimentacoes(); 
                 toast.success("Movimentação atualizada com sucesso!");
             }
         } catch (error) {
@@ -111,6 +112,7 @@ export default function ListarMovimentacaoEstoque() {
     };
 
     const handleDeletar = (id) => {
+        // ... (Lógica de deletar - sem alterações)
         toast.info(
             <div>
                 <p>Tem certeza que deseja deletar esta movimentação?</p>
@@ -135,6 +137,7 @@ export default function ListarMovimentacaoEstoque() {
     };
 
     const confirmarDelecao = async (id) => {
+        // ... (Lógica de confirmar deleção - sem alterações)
         try {
             await api.delete(`/movEstoque/deletar/${id}`, { withCredentials: true });
             setMovimentacoes(movs => movs.filter(m => m.id !== id));
@@ -148,9 +151,10 @@ export default function ListarMovimentacaoEstoque() {
         }
     };
 
-    // Filtros aprimorados
+    // Filtros (sem alterações)
     const movimentacoesFiltradas = movimentacoes.filter(m => {
-        const matchSearch = m.material.toLowerCase().includes(searchTerm.toLowerCase());
+        // A API já deve trazer o NOME do material, então a busca funciona
+        const matchSearch = m.material && m.material.toLowerCase().includes(searchTerm.toLowerCase());
         const matchTipo = !filtroTipo || m.tipoMov === filtroTipo;
         
         let matchData = true;
@@ -169,6 +173,7 @@ export default function ListarMovimentacaoEstoque() {
         return matchSearch && matchTipo && matchData;
     });
 
+    // Totais (sem alterações)
     const totais = movimentacoesFiltradas.reduce((acc, m) => {
         const quantidade = Number(m.quantidade) || 0;
         if (m.tipoMov === 'ENTRADA' || m.tipoMov === 'AJUSTE') {
@@ -183,22 +188,19 @@ export default function ListarMovimentacaoEstoque() {
         return acc;
     }, { entradas: 0, saidas: 0, transferencias: 0 });
 
+    // Estilos (sem alterações)
     const getTipoBadgeStyle = (tipo) => {
         switch (tipo) {
-            case 'ENTRADA': 
-                return 'bg-green-100 text-green-800 border-green-200';
-            case 'SAIDA': 
-                return 'bg-red-100 text-red-800 border-red-200';
-            case 'TRANSFERENCIA': 
-                return 'bg-blue-100 text-blue-800 border-blue-200';
-            case 'AJUSTE': 
-                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            default: 
-                return 'bg-gray-100 text-gray-800 border-gray-200';
+            case 'ENTRADA': return 'bg-green-100 text-green-800 border-green-200';
+            case 'SAIDA': return 'bg-red-100 text-red-800 border-red-200';
+            case 'TRANSFERENCIA': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'AJUSTE': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
     const limparFiltros = () => {
+        // ... (sem alterações)
         setSearchTerm("");
         setFiltroTipo("");
         setFiltroDataInicio("");
@@ -222,16 +224,30 @@ export default function ListarMovimentacaoEstoque() {
                                     Visualize e gerencie o fluxo de entrada e saída de insumos.
                                 </p>
                             </div>
-                            <div className="text-right">
-                                <div className="text-sm text-gray-500">Registros Encontrados</div>
-                                <div className="text-2xl font-bold text-cordes-blue">
-                                    {movimentacoesFiltradas.length}
+
+                            {/* --- PASSO 2: ADICIONAR O BOTÃO --- */}
+                            <div className="flex flex-col items-end gap-2">
+                                <NavLink
+                                    to="/estoque/adicionar" // Rota para a página de cadastro
+                                    className="bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-2 px-4 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md"
+                                >
+                                    <i className="fas fa-plus mr-2"></i>
+                                    Nova Movimentação
+                                </NavLink>
+                                <div className="text-right">
+                                    <div className="text-sm text-gray-500">Registros Encontrados</div>
+                                    <div className="text-2xl font-bold text-cordes-blue">
+                                        {movimentacoesFiltradas.length}
+                                    </div>
                                 </div>
                             </div>
+                            {/* --- FIM DA ADIÇÃO DO BOTÃO --- */}
+
                         </div>
 
-                        {/* Cards de Resumo */}
+                        {/* Cards de Resumo (sem alterações) */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                            {/* ... (card entradas) ... */}
                             <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-green-600 font-medium">Total de Entradas</p>
@@ -239,6 +255,7 @@ export default function ListarMovimentacaoEstoque() {
                                 </div>
                                 <i className="fas fa-arrow-down text-3xl text-green-500"></i>
                             </div>
+                            {/* ... (card saidas) ... */}
                             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-red-600 font-medium">Total de Saídas</p>
@@ -246,6 +263,7 @@ export default function ListarMovimentacaoEstoque() {
                                 </div>
                                 <i className="fas fa-arrow-up text-3xl text-red-500"></i>
                             </div>
+                            {/* ... (card transferencias) ... */}
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
                                 <div>
                                     <p className="text-sm text-blue-600 font-medium">Transferências</p>
@@ -255,9 +273,10 @@ export default function ListarMovimentacaoEstoque() {
                             </div>
                         </div>
 
-                        {/* Filtros Aprimorados */}
+                        {/* Filtros Aprimorados (sem alterações) */}
                         <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            {/* ... (inputs e selects dos filtros) ... */}
+                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">
                                         <i className="fas fa-search mr-2"></i>Buscar por Insumo
@@ -363,7 +382,8 @@ export default function ListarMovimentacaoEstoque() {
                                                     {new Date(mov.dataMovimentacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                    {mov.insumoId?.nome}
+                                                    {/* Exibe o nome do material (insumo) */}
+                                                    {mov.material}
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getTipoBadgeStyle(mov.tipoMov)}`}>
@@ -373,12 +393,18 @@ export default function ListarMovimentacaoEstoque() {
                                                 <td className="px-4 py-3 text-center text-sm font-bold">
                                                     {Number(mov.quantidade).toFixed(2)}
                                                 </td>
+
+                                                {/* --- PASSO 3: CORRIGIR COLUNAS --- */}
                                                 <td className="px-4 py-3 text-sm">
-                                                    {mov.estoqueOrigem ? `Estoque #${mov.estoqueOrigem}` : '-'}
+                                                    {/* Exibe o nome do estoque de origem */}
+                                                    {mov.nomeOrigem || '-'}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm">
-                                                    {mov.estoqueDestino ? `Estoque #${mov.estoqueDestino}` : '-'}
+                                                    {/* Exibe o nome do estoque de destino */}
+                                                    {mov.nomeDestino || '-'}
                                                 </td>
+                                                {/* --- FIM DA CORREÇÃO --- */}
+
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-3">
                                                         <button 

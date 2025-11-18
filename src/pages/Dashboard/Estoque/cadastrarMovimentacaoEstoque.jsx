@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from "react";
 import { toast } from 'react-toastify';
 
@@ -11,6 +12,7 @@ import ActionButtons from "../../../components/ActionButtons";
 import { api } from "../../../services/api";
 
 const TIPOS_MOVIMENTACAO = ["ENTRADA", "SAIDA", "TRANSFERENCIA", "AJUSTE"];
+const UNIDADES_INTEIRAS = new Set(["UN", "PACOTE", "JOGO", "ROLO"]);
 
 export default function CadastrarMovimentacaoEstoque() {
     const [movimentacao, setMovimentacao] = useState({
@@ -31,65 +33,121 @@ export default function CadastrarMovimentacaoEstoque() {
         }
     });
 
-    const [insumos, setInsumos] = useState([]);
+    const [insumosMestre, setInsumosMestre] = useState([]); 
+    const [insumosDisponiveis, setInsumosDisponiveis] = useState([]); 
+    const [insumoSelecionadoInfo, setInsumoSelecionadoInfo] = useState(null); 
+    const [marcas, setMarcas] = useState([]); 
     const [estoques, setEstoques] = useState([]);
     const [funcionarios, setFuncionarios] = useState([]);
-    const [marcas, setMarcas] = useState([]);
+    
     const [isLoading, setIsLoading] = useState(false);
     const [isCarregandoDados, setIsCarregandoDados] = useState(true);
+    const [loadingInsumos, setLoadingInsumos] = useState(false);
+    const [unidadeSelecionada, setUnidadeSelecionada] = useState("");
+
 
     useEffect(() => {
+        const carregarDadosIniciais = async () => {
+            setIsCarregandoDados(true);
+            try {
+                const [insumosRes, estoquesRes, funcionariosRes, marcasRes] = await Promise.all([
+                    api.get("/insumo/listar"),
+                    api.get("/estoque/listar"),
+                    api.get("/funcionario/listar"),
+                    api.get("/marca/listar")
+                ]);
+
+                const insumosData = insumosRes.data?.data || insumosRes.data || [];
+                const estoquesData = estoquesRes.data?.data || estoquesRes.data || [];
+                const funcionariosData = funcionariosRes.data?.data || funcionariosRes.data || [];
+                const marcasData = marcasRes.data?.data || marcasRes.data || [];
+
+                setInsumosMestre(Array.isArray(insumosData) ? insumosData : []);
+                setEstoques(Array.isArray(estoquesData) ? estoquesData : []);
+                setFuncionarios(Array.isArray(funcionariosData) ? funcionariosData : []);
+                setMarcas(Array.isArray(marcasData) ? marcasData : []);
+                
+            } catch (error) {
+                toast.error("Erro ao carregar dados do servidor.");
+                console.error("Erro ao carregar dados:", error);
+            } finally {
+                setIsCarregandoDados(false);
+            }
+        };
+        
         carregarDadosIniciais();
     }, []);
 
-    const carregarDadosIniciais = async () => {
-        setIsCarregandoDados(true);
-        try {
-            console.log("Iniciando carregamento de dados...");
-
-            const [insumosRes, estoquesRes, funcionariosRes, marcasRes] = await Promise.all([
-                api.get("/insumo/listar", { withCredentials: true }),
-                api.get("/estoque/listar", { withCredentials: true }),
-                api.get("/funcionario/listar", { withCredentials: true }),
-                api.get("/marca/listar", { withCredentials: true })
-            ]);
-
-            console.log("=== DADOS RECEBIDOS ===");
-            console.log("Insumos:", insumosRes.data);
-            console.log("Estoques:", estoquesRes.data);
-            console.log("Funcionários:", funcionariosRes.data);
-            console.log("Marcas RAW:", marcasRes.data);
-
-            // Trata diferentes formatos de resposta da API
-            const insumosData = insumosRes.data?.data || insumosRes.data || [];
-            const estoquesData = estoquesRes.data?.data || estoquesRes.data || [];
-            const funcionariosData = funcionariosRes.data?.data || funcionariosRes.data || [];
-            const marcasData = marcasRes.data?.data || marcasRes.data || [];
-
-            console.log("Marcas processadas:", marcasData);
-            console.log("Marcas é array?", Array.isArray(marcasData));
-            console.log("Quantidade de marcas:", marcasData.length);
-
-            setInsumos(Array.isArray(insumosData) ? insumosData : []);
-            setEstoques(Array.isArray(estoquesData) ? estoquesData : []);
-            setFuncionarios(Array.isArray(funcionariosData) ? funcionariosData : []);
-            setMarcas(Array.isArray(marcasData) ? marcasData : []);
-
-            console.log("Estado de marcas atualizado");
-
-            toast.success(`Dados carregados: ${insumosData.length} insumos, ${estoquesData.length} estoques, ${funcionariosData.length} funcionários, ${marcasData.length} marcas`);
-        } catch (error) {
-            console.error("Erro ao carregar dados:", error);
-            console.error("Detalhes do erro:", error.response?.data);
-            toast.error(error.response?.data?.message || "Erro ao carregar dados do servidor.");
-        } finally {
-            setIsCarregandoDados(false);
+    // useEffect de busca dinâmica (CORRETO)
+    useEffect(() => {
+        const { tipoMov, estoqueOrigemId } = movimentacao;
+        if ((tipoMov === 'AJUSTE' || tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA') && estoqueOrigemId) {
+            const fetchInsumosDoEstoque = async () => {
+                setLoadingInsumos(true);
+                setInsumosDisponiveis([]);
+                setInsumoSelecionadoInfo(null);
+                try {
+                    const response = await api.get(`/material-estoque/listar/por-estoque/${estoqueOrigemId}`);
+                    const insumosDoEstoque = response.data?.data || response.data || [];
+                    
+                    if (!Array.isArray(insumosDoEstoque)) {
+                         setInsumosDisponiveis([]);
+                         return;
+                    }
+                    setInsumosDisponiveis(insumosDoEstoque);
+                    if (insumosDoEstoque.length === 0) {
+                        toast.info("Este estoque de origem não possui insumos.");
+                    }
+                } catch (error) {
+                    toast.error("Erro ao carregar insumos do estoque de origem.");
+                } finally {
+                    setLoadingInsumos(false);
+                }
+            };
+            fetchInsumosDoEstoque();
+        } else {
+            setInsumosDisponiveis([]);
         }
-    };
+    }, [movimentacao.tipoMov, movimentacao.estoqueOrigemId]);
 
+    // --- handleChange ATUALIZADO ---
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setMovimentacao(prev => ({ ...prev, [name]: value }));
+        let unit = ""; 
+
+        if (name === 'tipoMov') {
+            setMovimentacao(prev => ({
+                ...prev,
+                [name]: value,
+                insumoId: "", estoqueOrigemId: "", estoqueDestinoId: "", quantidade: ""
+            }));
+            setInsumoSelecionadoInfo(null);
+            setUnidadeSelecionada(""); 
+        } else if (name === 'estoqueOrigemId') {
+            setMovimentacao(prev => ({
+                ...prev,
+                [name]: value,
+                insumoId: "", quantidade: ""
+            }));
+            setInsumoSelecionadoInfo(null);
+            setUnidadeSelecionada(""); 
+        } else if (name === 'insumoId') {
+            
+            // CORREÇÃO 1: 'AJUSTE' agora usa a mesma lógica de 'SAIDA'
+            if (movimentacao.tipoMov === 'SAIDA' || movimentacao.tipoMov === 'TRANSFERENCIA' || movimentacao.tipoMov === 'AJUSTE') {
+                const info = insumosDisponiveis.find(i => i.insumoId == value);
+                setInsumoSelecionadoInfo(info || null);
+                if (info) unit = info.unidade;
+            } else { // 'else' agora é apenas 'ENTRADA'
+                const infoMestre = insumosMestre.find(i => i.id == value);
+                setInsumoSelecionadoInfo(null);
+                if (infoMestre) unit = infoMestre.unidade;
+            }
+            setUnidadeSelecionada(unit); 
+            setMovimentacao(prev => ({ ...prev, [name]: value, quantidade: "" }));
+        } else {
+            setMovimentacao(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleMaterialChange = (e) => {
@@ -100,78 +158,64 @@ export default function CadastrarMovimentacaoEstoque() {
         }));
     };
 
+    // --- validarCampos ATUALIZADO ---
     const validarCampos = () => {
-        const { tipoMov, insumoId, quantidade, funcionarioId, estoqueOrigemId, estoqueDestinoId } = movimentacao;
+        const { tipoMov, insumoId, quantidade, funcionarioId, estoqueOrigemId, estoqueDestinoId, materialEstoque } = movimentacao;
 
-        if (!tipoMov) {
-            toast.warn("Selecione o tipo de movimentação.");
-            return false;
+        if (!tipoMov) { toast.warn("Selecione o tipo de movimentação."); return false; }
+        if (!insumoId) { toast.warn("Selecione um insumo."); return false; }
+        
+        // Para AJUSTE, a quantidade pode ser negativa (ou positiva), então não validamos <= 0
+        if (tipoMov !== 'AJUSTE' && (!quantidade || Number(quantidade) <= 0)) { 
+            toast.warn("Informe uma quantidade válida."); return false; 
         }
-
-        if (!insumoId) {
-            toast.warn("Selecione um insumo.");
-            return false;
+        if (tipoMov === 'AJUSTE' && (!quantidade || Number(quantidade) === 0)) {
+            toast.warn("A quantidade do ajuste não pode ser zero."); return false;
         }
+        if (!funcionarioId) { toast.warn("Selecione o funcionário responsável."); return false; }
 
-        if (!quantidade || Number(quantidade) <= 0) {
-            toast.warn("Informe uma quantidade válida.");
-            return false;
-        }
-
-        if (!funcionarioId) {
-            toast.warn("Selecione o funcionário responsável.");
-            return false;
-        }
-
-        // Validações específicas por tipo
-        if (tipoMov === 'TRANSFERENCIA') {
-            if (!estoqueOrigemId) {
-                toast.warn("Para transferência, selecione o estoque de origem.");
-                return false;
-            }
-            if (!estoqueDestinoId) {
-                toast.warn("Para transferência, selecione o estoque de destino.");
-                return false;
-            }
-            if (estoqueOrigemId === estoqueDestinoId) {
-                toast.warn("Os estoques de origem e destino devem ser diferentes.");
+        if (unidadeSelecionada && UNIDADES_INTEIRAS.has(unidadeSelecionada)) {
+            if (Number(quantidade) % 1 !== 0) {
+                toast.warn(`A quantidade para ${unidadeSelecionada} deve ser um número inteiro (sem decimais).`);
                 return false;
             }
         }
 
-        if (tipoMov === 'SAIDA' && !estoqueOrigemId) {
-            toast.warn("Para saída, selecione o estoque de origem.");
-            return false;
-        }
-
-        if ((tipoMov === 'ENTRADA' || tipoMov === 'AJUSTE') && !estoqueDestinoId) {
-            toast.warn(`Para ${tipoMov.toLowerCase()}, selecione o estoque de destino.`);
-            return false;
-        }
-
-        // Validação do MaterialEstoque para ENTRADA e AJUSTE
-        if (tipoMov === 'ENTRADA' || tipoMov === 'AJUSTE') {
-            if (!movimentacao.materialEstoque.valor || Number(movimentacao.materialEstoque.valor) <= 0) {
-                toast.warn("Informe o valor unitário do material.");
-                return false;
+        // 'AJUSTE' agora entra nesta validação
+        if (tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA' || tipoMov === 'AJUSTE') {
+            if (!estoqueOrigemId) { toast.warn(`Selecione o estoque de ${tipoMov === 'AJUSTE' ? 'referência' : 'origem'}.`); return false; }
+            if (!insumoSelecionadoInfo) { toast.warn("Insumo selecionado é inválido."); return false; }
+            
+            // Validação de quantidade (NÃO se aplica a AJUSTE, pois é um valor de correção)
+            if (tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA') {
+                if (Number(quantidade) > insumoSelecionadoInfo.quantidadeAtual) {
+                    toast.warn(`Quantidade excede o estoque. Disponível: ${insumoSelecionadoInfo.quantidadeAtual} ${insumoSelecionadoInfo.unidade}`);
+                    return false;
+                }
             }
-            if (!movimentacao.materialEstoque.marcaId) {
-                toast.warn("Selecione a marca do material.");
-                return false;
+            
+            if (tipoMov === 'TRANSFERENCIA') {
+                if (!estoqueDestinoId) { toast.warn("Selecione o estoque de destino."); return false; }
+                if (estoqueOrigemId === estoqueDestinoId) { toast.warn("Os estoques de origem e destino devem ser diferentes."); return false; }
             }
+        }
+        
+        // CORREÇÃO 2: 'AJUSTE' foi REMOVIDO desta validação
+        if (tipoMov === 'ENTRADA') {
+            if (!estoqueDestinoId) { toast.warn(`Para ENTRADA, selecione o estoque de destino.`); return false; }
+            if (!materialEstoque.valor || Number(materialEstoque.valor) <= 0) { toast.warn("Informe o valor unitário do material."); return false; }
+            if (!materialEstoque.marcaId) { toast.warn("Selecione a marca do material."); return false; }
         }
 
         return true;
     };
 
     const handleSubmit = async () => {
-        if (!validarCampos()) {
-            return;
-        }
-
+        if (!validarCampos()) { return; }
         setIsLoading(true);
         try {
-            // Preparar DTO básico conforme MovEstoqueDTO
+            const { tipoMov } = movimentacao; // Pega o tipoMov para o if
+            
             const dtoParaApi = {
                 tipoMov: movimentacao.tipoMov,
                 insumoId: Number(movimentacao.insumoId),
@@ -181,51 +225,42 @@ export default function CadastrarMovimentacaoEstoque() {
                 funcionarioId: Number(movimentacao.funcionarioId),
                 dataMovimentacao: movimentacao.dataMovimentacao,
                 observacao: movimentacao.observacao || null,
-                valorUnitario: null,
-                materialEstoque: null
+                valorUnitario: null, 
+                materialEstoque: null 
             };
-
-            // Adiciona materialEstoque e valorUnitario apenas para ENTRADA e AJUSTE
-            if (movimentacao.tipoMov === 'ENTRADA' || movimentacao.tipoMov === 'AJUSTE') {
+            
+            // Se for SAIDA, AJUSTE ou TRANSFERENCIA, pega o valor unitário do insumo selecionado (se existir)
+            if (tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA' || tipoMov === 'AJUSTE') {
+                if (insumoSelecionadoInfo && insumoSelecionadoInfo.valor) {
+                    dtoParaApi.valorUnitario = Number(insumoSelecionadoInfo.valor);
+                }
+            }
+            
+            // CORREÇÃO 3: 'AJUSTE' foi REMOVIDO daqui
+            if (movimentacao.tipoMov === 'ENTRADA') {
                 dtoParaApi.valorUnitario = Number(movimentacao.materialEstoque.valor);
-                
                 dtoParaApi.materialEstoque = {
                     estoqueId: Number(movimentacao.estoqueDestinoId),
-                    materialId: Number(movimentacao.materialEstoque.materialId),
+                    materialId: Number(movimentacao.insumoId),
                     marcaId: Number(movimentacao.materialEstoque.marcaId),
                     modelo: movimentacao.materialEstoque.modelo || null,
                     valor: Number(movimentacao.materialEstoque.valor),
                     quantidadeAtual: Number(movimentacao.quantidade),
-                    quantidadeMinima: movimentacao.materialEstoque.quantidadeMinima 
-                        ? Number(movimentacao.materialEstoque.quantidadeMinima) 
-                        : null,
-                    quantidadeMaxima: movimentacao.materialEstoque.quantidadeMaxima 
-                        ? Number(movimentacao.materialEstoque.quantidadeMaxima) 
-                        : null
+                    quantidadeMinima: movimentacao.materialEstoque.quantidadeMinima ? Number(movimentacao.materialEstoque.quantidadeMinima) : null,
+                    quantidadeMaxima: movimentacao.materialEstoque.quantidadeMaxima ? Number(movimentacao.materialEstoque.quantidadeMaxima) : null
                 };
             }
 
-            console.log("=== PAYLOAD ENVIADO PARA API ===");
-            console.log(JSON.stringify(dtoParaApi, null, 2));
-
-            const response = await api.post('/movEstoque/cadastrar', dtoParaApi, { withCredentials: true });
-
-            console.log("=== RESPOSTA DA API ===");
-            console.log(response.data);
-
+            // Para AJUSTE, o 'estoqueDestino' deve ser o mesmo que a 'origem' para o backend
+            if (movimentacao.tipoMov === 'AJUSTE') {
+                dtoParaApi.estoqueDestinoId = Number(movimentacao.estoqueOrigemId);
+            }
+            
+            await api.post('/movEstoque/cadastrar', dtoParaApi, { withCredentials: true });
             toast.success("Movimentação registrada com sucesso!");
             limparCampos();
         } catch (error) {
-            console.error("=== ERRO AO REGISTRAR ===");
-            console.error("Erro completo:", error);
-            console.error("Response data:", error.response?.data);
-            console.error("Status:", error.response?.status);
-            
-            const mensagemErro = error.response?.data?.erro 
-                || error.response?.data?.message 
-                || error.response?.data?.error
-                || "Erro ao registrar movimentação. Verifique o console para mais detalhes.";
-            
+            const mensagemErro = error.response?.data?.erro || error.response?.data?.message || "Erro ao registrar movimentação.";
             toast.error(mensagemErro, { autoClose: 5000 });
         } finally {
             setIsLoading(false);
@@ -234,22 +269,13 @@ export default function CadastrarMovimentacaoEstoque() {
 
     const limparCampos = () => {
         setMovimentacao({
-            tipoMov: "",
-            insumoId: "",
-            estoqueOrigemId: "",
-            estoqueDestinoId: "",
-            quantidade: "",
-            funcionarioId: "",
-            dataMovimentacao: new Date().toISOString().split('T')[0],
-            observacao: "",
-            materialEstoque: {
-                marcaId: "",
-                modelo: "",
-                valor: "",
-                quantidadeMinima: "",
-                quantidadeMaxima: ""
-            }
+            tipoMov: "", insumoId: "", estoqueOrigemId: "", estoqueDestinoId: "",
+            quantidade: "", funcionarioId: "", dataMovimentacao: new Date().toISOString().split('T')[0],
+            observacao: "", materialEstoque: { marcaId: "", modelo: "", valor: "", quantidadeMinima: "", quantidadeMaxima: "" }
         });
+        setInsumosDisponiveis([]);
+        setInsumoSelecionadoInfo(null);
+        setUnidadeSelecionada(""); 
     };
 
     return (
@@ -259,7 +285,7 @@ export default function CadastrarMovimentacaoEstoque() {
                 <Header />
                 <div className="p-6">
                     <div className="bg-white rounded-xl shadow-md p-8">
-                        {/* Cabeçalho */}
+                        {/* ... (Cabeçalho e Informativo) ... */}
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h1 className="text-3xl font-bold text-cordes-blue">
@@ -276,26 +302,16 @@ export default function CadastrarMovimentacaoEstoque() {
                                 </div>
                             )}
                         </div>
-
-                        {/* Informativo sobre tipos de movimentação */}
+                        
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                            <h3 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
+                           <h3 className="font-semibold text-blue-800 mb-2 flex items-center gap-2">
                                 <i className="fas fa-info-circle"></i>
                                 Tipos de Movimentação
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-blue-700">
-                                <div>
-                                    <strong>ENTRADA:</strong> Compra ou reposição de material
-                                </div>
-                                <div>
-                                    <strong>SAÍDA:</strong> Uso ou consumo do material
-                                </div>
-                                <div>
-                                    <strong>TRANSFERÊNCIA:</strong> Movimentação entre estoques
-                                </div>
-                                <div>
-                                    <strong>AJUSTE:</strong> Correção manual de inventário
-                                </div>
+                                <div><strong>ENTRADA:</strong> Novo item. Usa lista mestra. Requer Destino.</div>
+                                <div><strong>SAÍDA/TRANSFERÊNCIA:</strong> Item existente. Requer Origem. Lista insumos da origem.</div>
+                                <div><strong>AJUSTE:</strong> Item existente. Requer Estoque (Origem). Lista insumos da origem.</div>
                             </div>
                         </div>
 
@@ -305,17 +321,31 @@ export default function CadastrarMovimentacaoEstoque() {
                                     movimentacao={movimentacao}
                                     handleChange={handleChange}
                                     tipos={TIPOS_MOVIMENTACAO}
-                                    insumos={insumos}
+                                    
+                                    insumos={
+                                        (movimentacao.tipoMov === 'SAIDA' || movimentacao.tipoMov === 'TRANSFERENCIA' || movimentacao.tipoMov === 'AJUSTE')
+                                        ? insumosDisponiveis.map(i => ({ 
+                                            id: i.insumoId, 
+                                            nomeCompleto: `${i.insumoNome} (${i.marcaNome || 'N/A'}) (Disponível: ${i.quantidadeAtual} ${i.unidade})`,
+                                            nome: i.insumoNome
+                                          }))
+                                        : insumosMestre // Apenas ENTRADA usa a lista mestra
+                                    }
+                                    
                                     estoques={estoques}
+                                    loadingInsumos={loadingInsumos}
+                                    insumoSelecionadoInfo={insumoSelecionadoInfo}
+                                    unidadeSelecionada={unidadeSelecionada}
                                 />
                             </FormSection>
 
-                            {(movimentacao.tipoMov === 'ENTRADA' || movimentacao.tipoMov === 'AJUSTE') && (
-                                <FormSection title="Detalhes do Material no Estoque">
+                            {/* CORREÇÃO 4: 'AJUSTE' foi REMOVIDO da condição de renderização */}
+                            {(movimentacao.tipoMov === 'ENTRADA') && (
+                                <FormSection title="Detalhes do Material no Estoque (Novo Item)">
                                     <DetalhesMaterialEntrada
                                         materialEstoque={movimentacao.materialEstoque}
                                         handleMaterialChange={handleMaterialChange}
-                                        marcas={marcas}
+                                        marcas={marcas} 
                                     />
                                 </FormSection>
                             )}
@@ -331,7 +361,7 @@ export default function CadastrarMovimentacaoEstoque() {
                             <ActionButtons
                                 onSave={handleSubmit}
                                 onClear={limparCampos}
-                                isLoading={isLoading || isCarregandoDados}
+                                isLoading={isLoading || isCarregandoDados || loadingInsumos}
                             />
                         </div>
                     </div>
