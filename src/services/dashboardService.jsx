@@ -84,6 +84,46 @@ const dashboardService = {
     }
   },
 
+  async getObrasConcluidas() {
+    try {
+      const response = await api.get('/obras/listar');
+      const obras = response.data?.data || [];
+      
+      // Filtra apenas obras com status CONCLUIDA
+      const obrasConcluidas = obras.filter(obra => obra.status === 'CONCLUIDA');
+
+      console.log('Obras concluídas encontradas:', obrasConcluidas.length);
+      
+      return {
+        quantidade: obrasConcluidas.length,
+        obras: obrasConcluidas
+      };
+    } catch (error) {
+      console.error('Erro ao buscar obras concluídas:', error.response || error);
+      return { quantidade: 0, obras: [] };
+    }
+  },
+
+  async getCotacoesAbertas() {
+    try {
+      const response = await api.get('/cotacoes/listar');
+      const cotacoes = response.data?.data || [];
+      
+      // Filtra apenas obras com status CONCLUIDA
+      const cotacoesAbertas = cotacoes.filter(cotacao => cotacao.status === 'ABERTA');
+
+      console.log('cotacoes abertas encontradas:', cotacoesAbertas.length);
+      
+      return {
+        quantidadeCotacoes: cotacoesAbertas.length,
+        cotacoes: cotacoesAbertas
+      };
+    } catch (error) {
+      console.error('Erro ao buscar obras concluídas:', error.response || error);
+      return { quantidadeCotacoes: 0, cotacoes: [] };
+    }
+  },
+
   // Nova função: Agrupa obras por mês de criação
   async getObrasPorMes() {
     try {
@@ -159,13 +199,93 @@ const dashboardService = {
 
   async getEstoque() {
     try {
-      const response = await api.get('/dashboard/estoque');
-      return response.data?.data || response.data;
+      const response = await api.get('/material-estoque/listar');
+      const estoque = response.data?.data || response.data || [];
+      
+      // Conta a quantidade de produtos cadastrados (com base nos IDs únicos)
+      const quantidadeProdutos = estoque.length;
+      
+      console.log('Produtos cadastrados encontrados:', quantidadeProdutos);
+      
+      return {
+        quantidade: quantidadeProdutos,
+        produtos: estoque
+      };
     } catch (error) {
       console.error('Erro ao buscar estoque:', error.response || error);
+      return {
+        quantidade: 0,
+        produtos: []
+      };
+    }
+  },
+
+  async getEstoqueCritico() {
+  try {
+    const response = await api.get('/material-estoque/listar');
+    const estoque = response.data?.data || response.data || [];
+
+    // Filtra apenas os críticos
+    return estoque.filter(item => item.estoqueCritico === true);
+
+  } catch (error) {
+    console.error('Erro ao buscar estoque:', error.response || error);
+    return [];
+  }
+},
+
+async getMovimentacoesEstoque() {
+    try {
+      const response = await api.get('/movEstoque/listar');
+      const movimentacoes = response.data || [];
+
+      if (movimentacoes.length === 0) {
+        console.warn('Nenhuma movimentação de estoque retornada pela API');
+        return [];
+      }
+
+      // Agrupa por mês e separa entradas/saídas
+      const movimentacoesPorMes = {};
+      
+      movimentacoes.forEach(mov => {
+        const data = mov.dataMovimentacao;
+        if (!data) {
+          console.warn('Movimentação sem data:', mov);
+          return;
+        }
+
+        const mes = new Date(data).getMonth() + 1;
+        
+        if (!movimentacoesPorMes[mes]) {
+          movimentacoesPorMes[mes] = { mes, entradas: 0, saidas: 0 };
+        }
+        
+        const quantidade = Number(mov.quantidade) || 0;
+        
+        // ENTRADA, AJUSTE_POSITIVO contam como entradas
+        // SAIDA, TRANSFERENCIA, AJUSTE_NEGATIVO contam como saídas
+        if (mov.tipoMov === 'ENTRADA' || mov.tipoMov === 'AJUSTE_POSITIVO') {
+          movimentacoesPorMes[mes].entradas += quantidade;
+        } else if (mov.tipoMov === 'SAIDA' || mov.tipoMov === 'TRANSFERENCIA' || mov.tipoMov === 'AJUSTE_NEGATIVO') {
+          movimentacoesPorMes[mes].saidas += quantidade;
+        }
+      });
+
+      // Garante array de 12 meses
+      const resultado = Array.from({ length: 12 }, (_, i) => {
+        const mes = i + 1;
+        return movimentacoesPorMes[mes] || { mes, entradas: 0, saidas: 0 };
+      });
+
+      console.log('Movimentações de estoque processadas:', resultado);
+      return resultado;
+      
+    } catch (error) {
+      console.error('Erro ao buscar movimentações de estoque:', error.response || error);
       return [];
     }
   },
+
 };
 
 export default dashboardService;
