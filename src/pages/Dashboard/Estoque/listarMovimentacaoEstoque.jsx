@@ -199,7 +199,7 @@ export default function ListarMovimentacaoEstoque() {
                             </div>
                             <div className="flex flex-col items-end gap-2">
                                 <NavLink
-                                    to="/estoque/adicionar"
+                                    to="/movimentacao/adicionar"
                                     className="bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-2 px-4 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md"
                                 >
                                     <i className="fas fa-plus mr-2"></i>
