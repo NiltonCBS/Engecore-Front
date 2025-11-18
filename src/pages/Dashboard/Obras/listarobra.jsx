@@ -300,6 +300,33 @@ export default function ListarObras() {
                 <div className="text-2xl font-bold text-cordes-blue">{obrasFiltradas.length}</div>
               </div>
             </div>
+              {/* Resumo Estatístico */}
+            <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-blue-600 text-2xl font-bold">
+                  {obras.filter(o => o.status === "EM_ANDAMENTO").length}
+                </div>
+                <div className="text-blue-800 text-sm">Em Andamento</div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-green-600 text-2xl font-bold">
+                  {obras.filter(o => o.status === "CONCLUIDA").length}
+                </div>
+                <div className="text-green-800 text-sm">Concluídas</div>
+              </div>
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <div className="text-yellow-600 text-2xl font-bold">
+                  {obras.filter(o => o.status === "PLANEJAMENTO").length}
+                </div>
+                <div className="text-yellow-800 text-sm">Planejamento</div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-purple-600 text-2xl font-bold">
+                  {formatarMoeda(obras.reduce((total, obra) => total + obra.valorContrato, 0))}
+                </div>
+                <div className="text-purple-800 text-sm">Valor Total</div>
+              </div>
+            </div>
 
             {/* Filtros */}
             <div className="bg-gray-50 p-6 rounded-lg mb-6">
@@ -406,9 +433,6 @@ export default function ListarObras() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Progresso
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Engenheiro
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -456,21 +480,6 @@ export default function ListarObras() {
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(obra.status)}`}>
                             {formatarStatus(obra.status)}
                           </span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <div className="flex-1">
-                              <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
-                                <span>{obra.progresso}%</span>
-                              </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2">
-                                <div 
-                                  className={`h-2 rounded-full ${getProgressColor(obra.progresso)}`}
-                                  style={{ width: `${obra.progresso}%` }}
-                                ></div>
-                              </div>
-                            </div>
-                          </div>
                         </td>
                         <td className="px-6 py-4 text-sm text-gray-900">
                           {obra.engenheiro}
@@ -551,33 +560,7 @@ export default function ListarObras() {
               </div>
             )}
 
-            {/* Resumo Estatístico */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg">
-                <div className="text-blue-600 text-2xl font-bold">
-                  {obras.filter(o => o.status === "EM_ANDAMENTO").length}
-                </div>
-                <div className="text-blue-800 text-sm">Em Andamento</div>
-              </div>
-              <div className="bg-green-50 p-4 rounded-lg">
-                <div className="text-green-600 text-2xl font-bold">
-                  {obras.filter(o => o.status === "CONCLUIDA").length}
-                </div>
-                <div className="text-green-800 text-sm">Concluídas</div>
-              </div>
-              <div className="bg-yellow-50 p-4 rounded-lg">
-                <div className="text-yellow-600 text-2xl font-bold">
-                  {obras.filter(o => o.status === "PLANEJAMENTO").length}
-                </div>
-                <div className="text-yellow-800 text-sm">Planejamento</div>
-              </div>
-              <div className="bg-purple-50 p-4 rounded-lg">
-                <div className="text-purple-600 text-2xl font-bold">
-                  {formatarMoeda(obras.reduce((total, obra) => total + obra.valorContrato, 0))}
-                </div>
-                <div className="text-purple-800 text-sm">Valor Total</div>
-              </div>
-            </div>
+          
           </div>
         </div>
       </div>

@@ -1,78 +1,110 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
 import { toast } from 'react-toastify';
+import { api } from "../../../services/api"; 
+import financeiroService from "../../../services/financeiroService";
 
 export default function CadastrarMovimentacao() {
   const [movimentacao, setMovimentacao] = useState({
     valor: "",
-    tipo: "",
+    tipo: "", 
     categoriaFinanceira: "",
-    obraRelacionada: "",
-    idInsumo: "",
-    funcionarioResponsavel: "",
-    data: "",
-    desc: "",
-    clienteReferente: ""
+    obraId: "",
+    insumoId: "",
+    funcionarioResponsavelId: "",
+    dataMovimento: "",
+    descricao: "",
+    clienteId: ""
   });
 
-  const tiposMovimentacao = [
-    "Receita",
-    "Despesa",
-    "Transferência"
-  ];
+  const [obras, setObras] = useState([]);
+  const [clientes, setClientes] = useState([]);
+  const [funcionarios, setFuncionarios] = useState([]);
+  const [insumos, setInsumos] = useState([]);
+  const [loadingData, setLoadingData] = useState(true);
 
   const categoriasFinanceiras = [
-    "Material de Construção",
-    "Mão de Obra",
-    "Equipamentos",
-    "Transporte",
-    "Alimentação",
-    "Serviços Terceirizados",
-    "Administrativo",
-    "Impostos e Taxas",
-    "Outros"
+    "COMPRA_MATERIAL", "FOLHA_PAGAMENTO", "DESPESA_ADMINISTRATIVA", "RECEITA_CLIENTE", "OUTROS"
   ];
 
-  const obras = [
-    "Edifício Residencial ABC",
-    "Reforma Comercial XYZ",
-    "Construção Galpão Industrial",
-    "Ampliação Residencial Silva",
-    "Obra Condomínio Premium"
-  ];
+  useEffect(() => {
+      async function carregarDados() {
+          try {
+            const [obrasRes, clientesRes, funcRes, insumosRes] = await Promise.all([
+                api.get("/obras/listar"),
+                api.get("/cliente/listar"),
+                api.get("/funcionario/listar"),
+                api.get("/insumo/listar")
+            ]);
+            
+            if(obrasRes.data.success) setObras(obrasRes.data.data);
+            if(clientesRes.data.success) setClientes(clientesRes.data.data);
+            if(funcRes.data.success) setFuncionarios(funcRes.data.data);
+            if(insumosRes.data.success) setInsumos(insumosRes.data.data);
 
-  const funcionarios = [
-    "João Silva",
-    "Maria Santos",
-    "Pedro Oliveira",
-    "Ana Costa",
-    "Carlos Ferreira"
-  ];
-
-  const clientes = [
-    "João Silva",
-    "Maria Santos",
-    "Construtora ABC Ltda",
-    "Pedro Oliveira",
-    "Incorporadora XYZ S/A"
-  ];
+          } catch (error) {
+              toast.error("Erro ao carregar dados auxiliares.");
+          } finally {
+              setLoadingData(false);
+          }
+      }
+      carregarDados();
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // --- LÓGICA DE AUTO-PREENCHIMENTO DO CLIENTE ---
+    if (name === 'obraId') {
+        // Encontra a obra selecionada na lista
+        // (Nota: verifique se o ID vem como 'id' ou 'idObra' no seu objeto, ajustei para ambos)
+        const obraSelecionada = obras.find(o => String(o.idObra || o.id) === String(value));
+
+        if (obraSelecionada && obraSelecionada.clienteId) {
+            // Se a obra tem cliente, atualiza a obra E o cliente
+            setMovimentacao(prev => ({ 
+                ...prev, 
+                [name]: value,
+                clienteId: obraSelecionada.clienteId 
+            }));
+            
+            // Opcional: Avisar o usuário visualmente
+            toast.info(`Cliente "${obraSelecionada.clienteNome || 'vinculado'}" selecionado automaticamente.`);
+            return;
+        }
+    }
+    // -----------------------------------------------
+
     setMovimentacao(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = () => {
-    // Validações básicas
-    if (!movimentacao.valor || !movimentacao.tipo || !movimentacao.categoriaFinanceira || !movimentacao.data) {
-       toast.warn("Por favor, preencha os campos obrigatórios.");
+  const handleSubmit = async () => {
+    if (!movimentacao.valor || !movimentacao.tipo || !movimentacao.categoriaFinanceira || !movimentacao.dataMovimento || !movimentacao.funcionarioResponsavelId) {
+       toast.warn("Por favor, preencha os campos obrigatórios (*).");
       return;
     }
 
-    console.log("Movimentação cadastrada:", movimentacao);
-    toast.success("Movimentação cadastrada com sucesso!");
-    limparCampos();
+    try {
+        const payload = {
+            valor: parseFloat(movimentacao.valor),
+            tipo: movimentacao.tipo,
+            categoriaFinanceira: movimentacao.categoriaFinanceira,
+            dataMovimento: movimentacao.dataMovimento,
+            descricao: movimentacao.descricao,
+            funcionarioResponsavelId: Number(movimentacao.funcionarioResponsavelId),
+            obraId: movimentacao.obraId ? Number(movimentacao.obraId) : null,
+            clienteId: movimentacao.clienteId ? Number(movimentacao.clienteId) : null,
+            insumoId: movimentacao.insumoId ? Number(movimentacao.insumoId) : null,
+        };
+
+        await financeiroService.cadastrar(payload);
+        toast.success("Movimentação cadastrada com sucesso!");
+        limparCampos();
+    } catch (error) {
+        console.error(error);
+        toast.error(error.response?.data?.message || "Erro ao cadastrar.");
+    }
   };
 
   const limparCampos = () => {
@@ -80,31 +112,13 @@ export default function CadastrarMovimentacao() {
       valor: "",
       tipo: "",
       categoriaFinanceira: "",
-      obraRelacionada: "",
-      idInsumo: "",
-      funcionarioResponsavel: "",
-      data: "",
-      desc: "",
-      clienteReferente: ""
+      obraId: "",
+      insumoId: "",
+      funcionarioResponsavelId: "",
+      dataMovimento: "",
+      descricao: "",
+      clienteId: ""
     });
-  };
-
-  const getTipoColor = () => {
-    switch(movimentacao.tipo) {
-      case 'Receita': return 'text-green-600';
-      case 'Despesa': return 'text-red-600';
-      case 'Transferência': return 'text-blue-600';
-      default: return 'text-gray-600';
-    }
-  };
-
-  const getTipoIcon = () => {
-    switch(movimentacao.tipo) {
-      case 'Receita': return 'fa-arrow-up';
-      case 'Despesa': return 'fa-arrow-down';
-      case 'Transferência': return 'fa-exchange-alt';
-      default: return 'fa-dollar-sign';
-    }
   };
 
   return (
@@ -115,211 +129,105 @@ export default function CadastrarMovimentacao() {
         <div className="p-6">
           <div className="bg-white rounded-xl shadow-md p-8">
             <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-3xl font-bold text-cordes-blue">Cadastro de Movimentação Financeira</h1>
-                <p className="text-gray-600 mt-2">Registre receitas, despesas e transferências</p>
-              </div>
-              {movimentacao.tipo && (
-                <div className="text-right">
-                  <div className="text-sm text-gray-500">Tipo de Movimentação</div>
-                  <div className={`text-2xl font-bold ${getTipoColor()} flex items-center gap-2`}>
-                    <i className={`fas ${getTipoIcon()}`}></i>
-                    {movimentacao.tipo}
-                  </div>
-                </div>
-              )}
+              <h1 className="text-3xl font-bold text-cordes-blue">Cadastro Financeiro</h1>
             </div>
 
+            {loadingData ? <p>Carregando...</p> : (
             <div className="space-y-8">
-              {/* Informações Básicas */}
               <div className="bg-gray-50 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Informações Básicas</h2>
+                <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Dados Principais</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-gray-700 font-medium mb-2">Valor *</label>
-                    <div className="relative">
-                      <span className="absolute left-3 top-3 text-gray-500">R$</span>
-                      <input
-                        type="number"
-                        name="valor"
-                        value={movimentacao.valor}
-                        onChange={handleChange}
-                        step="0.01"
-                        placeholder="0,00"
-                        className="w-full border border-gray-300 rounded-lg p-3 pl-10 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                      />
-                    </div>
+                    <input type="number" name="valor" value={movimentacao.valor} onChange={handleChange} className="w-full border p-3 rounded-lg" placeholder="0.00" />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-gray-700 font-medium mb-2">Tipo *</label>
+                    <select name="tipo" value={movimentacao.tipo} onChange={handleChange} className="w-full border p-3 rounded-lg">
+                        <option value="">Selecione...</option>
+                        <option value="RECEITA">Receita</option>
+                        <option value="DESPESA">Despesa</option>
+                    </select>
                   </div>
 
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2">Tipo *</label>
-                    <select
-                      name="tipo"
-                      value={movimentacao.tipo}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="">Selecione o tipo</option>
-                      {tiposMovimentacao.map(tipo => (
-                        <option key={tipo} value={tipo}>{tipo}</option>
-                      ))}
+                    <label className="block text-gray-700 font-medium mb-2">Categoria *</label>
+                    <select name="categoriaFinanceira" value={movimentacao.categoriaFinanceira} onChange={handleChange} className="w-full border p-3 rounded-lg">
+                        <option value="">Selecione...</option>
+                        {categoriasFinanceiras.map(c => <option key={c} value={c}>{c.replace("_", " ")}</option>)}
                     </select>
                   </div>
 
                   <div>
                     <label className="block text-gray-700 font-medium mb-2">Data *</label>
-                    <input
-                      type="date"
-                      name="data"
-                      value={movimentacao.data}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    />
+                    <input type="date" name="dataMovimento" value={movimentacao.dataMovimento} onChange={handleChange} className="w-full border p-3 rounded-lg" />
                   </div>
 
                   <div>
-                    <label className="block text-gray-700 font-medium mb-2">Categoria Financeira *</label>
-                    <select
-                      name="categoriaFinanceira"
-                      value={movimentacao.categoriaFinanceira}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="">Selecione a categoria</option>
-                      {categoriasFinanceiras.map(categoria => (
-                        <option key={categoria} value={categoria}>{categoria}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Obra Relacionada</label>
-                    <select
-                      name="obraRelacionada"
-                      value={movimentacao.obraRelacionada}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="">Selecione a obra</option>
-                      {obras.map(obra => (
-                        <option key={obra} value={obra}>{obra}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Funcionário Responsável</label>
-                    <select
-                      name="funcionarioResponsavel"
-                      value={movimentacao.funcionarioResponsavel}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="">Selecione o funcionário</option>
-                      {funcionarios.map(funcionario => (
-                        <option key={funcionario} value={funcionario}>{funcionario}</option>
-                      ))}
+                    <label className="block text-gray-700 font-medium mb-2">Responsável *</label>
+                    <select name="funcionarioResponsavelId" value={movimentacao.funcionarioResponsavelId} onChange={handleChange} className="w-full border p-3 rounded-lg">
+                        <option value="">Selecione...</option>
+                        {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome}</option>)}
                     </select>
                   </div>
                 </div>
               </div>
 
-              {/* Informações Complementares */}
+              {/* Vínculos */}
               <div className="bg-gray-50 p-6 rounded-lg">
-                <h2 className="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Informações Complementares</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">Cliente Referente</label>
-                    <select
-                      name="clienteReferente"
-                      value={movimentacao.clienteReferente}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    >
-                      <option value="">Selecione o cliente</option>
-                      {clientes.map(cliente => (
-                        <option key={cliente} value={cliente}>{cliente}</option>
-                      ))}
-                    </select>
-                  </div>
+                 <div className="flex items-center justify-between mb-4 border-b pb-2">
+                    <h2 className="text-xl font-semibold text-gray-800">Vínculos (Opcional)</h2>
+                 </div>
+                 
+                 {/* Mensagem Informativa sobre a Empresa */}
+                 <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 p-4 rounded shadow-sm">
+                    <div className="flex items-start">
+                        <i className="fas fa-info-circle text-blue-500 mt-1 mr-3"></i>
+                        <div>
+                            <p className="text-sm text-blue-900 font-semibold">
+                                Movimentação da Empresa
+                            </p>
+                            <p className="text-sm text-blue-700">
+                                Se você <strong>não selecionar</strong> uma Obra nem um Cliente, esta movimentação será registrada automaticamente como uma despesa ou receita <strong>da Empresa</strong> (Custo Administrativo).
+                            </p>
+                        </div>
+                    </div>
+                 </div>
 
-                  <div>
-                    <label className="block text-gray-700 font-medium mb-2">ID Insumo</label>
-                    <input
-                      type="text"
-                      name="idInsumo"
-                      value={movimentacao.idInsumo}
-                      onChange={handleChange}
-                      placeholder="Código do insumo relacionado"
-                      className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    />
-                  </div>
-                </div>
-
-                <div className="mt-4">
-                  <label className="block text-gray-700 font-medium mb-2">Descrição</label>
-                  <textarea
-                    name="desc"
-                    value={movimentacao.desc}
-                    onChange={handleChange}
-                    placeholder="Descreva detalhes sobre esta movimentação..."
-                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                    rows="4"
-                  ></textarea>
-                </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-gray-700 font-medium mb-2">Obra</label>
+                        <select name="obraId" value={movimentacao.obraId} onChange={handleChange} className="w-full border p-3 rounded-lg">
+                            <option value="">Nenhuma (Empresa)</option>
+                            {obras.map(o => <option key={o.idObra || o.id} value={o.idObra || o.id}>{o.nomeObra || o.nome}</option>)}
+                        </select>
+                        <p className="text-xs text-gray-500 mt-1">Selecionar a obra preencherá o cliente automaticamente.</p>
+                    </div>
+                    <div>
+                        <label className="block text-gray-700 font-medium mb-2">Cliente</label>
+                        <select name="clienteId" value={movimentacao.clienteId} onChange={handleChange} className="w-full border p-3 rounded-lg">
+                            <option value="">Nenhum (Empresa)</option>
+                            {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                        </select>
+                    </div>
+                    <div className="md:col-span-2">
+                         <label className="block text-gray-700 font-medium mb-2">Descrição</label>
+                         <textarea name="descricao" value={movimentacao.descricao} onChange={handleChange} rows="3" className="w-full border p-3 rounded-lg" placeholder="Detalhes sobre a movimentação..."></textarea>
+                    </div>
+                 </div>
               </div>
-
-              {/* Resumo da Movimentação */}
-              {movimentacao.valor && movimentacao.tipo && (
-                <div className="bg-blue-50 border border-blue-200 p-6 rounded-lg">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Resumo da Movimentação</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-sm text-gray-600">Valor</p>
-                      <p className="text-lg font-bold text-gray-800">
-                        R$ {parseFloat(movimentacao.valor || 0).toFixed(2)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Tipo</p>
-                      <p className={`text-lg font-bold ${getTipoColor()}`}>
-                        {movimentacao.tipo}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Categoria</p>
-                      <p className="text-lg font-bold text-gray-800">
-                        {movimentacao.categoriaFinanceira || "-"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Data</p>
-                      <p className="text-lg font-bold text-gray-800">
-                        {movimentacao.data ? new Date(movimentacao.data).toLocaleDateString('pt-BR') : "-"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Botões de Ação */}
+              
               <div className="flex gap-4 pt-6 border-t">
-                <button
-                  onClick={handleSubmit}
-                  className="flex-1 bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg"
-                >
-                  <i className="fas fa-check mr-2"></i>
-                  Cadastrar Movimentação
+                <button onClick={handleSubmit} className="flex-1 bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700">
+                  Salvar Movimentação
                 </button>
-                <button
-                  onClick={limparCampos}
-                  className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300"
-                >
-                  <i className="fas fa-eraser mr-2"></i>
-                  Limpar Campos
+                <button onClick={limparCampos} className="px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-100">
+                  Limpar
                 </button>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>

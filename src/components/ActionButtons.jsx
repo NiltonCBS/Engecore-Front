@@ -6,7 +6,7 @@ export default function ActionButtons({ onSave, onClear, isLoading }) {
             <button 
                 onClick={onSave} 
                 disabled={isLoading} 
-                className="flex-1 bg-cordes-blue text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 shadow-md disabled:bg-gray-400"
+                className="flex-1 bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg hover:bg-blue-600 transition duration-300 shadow-md disabled:bg-gray-400"
             >
                 <i className={`fas ${isLoading ? 'fa-spinner fa-spin' : 'fa-check'} mr-2`}></i>
                 {isLoading ? 'Registrando...' : 'Registrar Movimentação'}

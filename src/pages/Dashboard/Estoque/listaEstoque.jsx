@@ -139,7 +139,7 @@ export default function ListarEstoque() {
                             </div>
                             <NavLink
                                 to="/estoque/cadastrar"
-                                className="bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-2 px-4 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md"
+                                className="bg-blue-700 text-white font-semibold border border-gray-300 py-2 px-4 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md"
                             >
                                 <i className="fas fa-plus mr-2"></i>
                                 Novo Estoque
@@ -153,7 +153,7 @@ export default function ListarEstoque() {
                                     <tr>
                                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
                                         <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome</th>
-                                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Localização</th>
+                                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Nome da Obra</th>
                                         <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
                                     </tr>
                                 </thead>
@@ -169,7 +169,7 @@ export default function ListarEstoque() {
                                             <tr key={estoque.id} className="border-b hover:bg-gray-50">
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">#{estoque.id}</td>
                                                 <td className="px-4 py-3 text-sm">{estoque.nome}</td>
-                                                <td className="px-4 py-3 text-sm">{estoque.localizacao || '-'}</td>
+                                                <td className="px-4 py-3 text-sm">{estoque.nomeObra || '-'}</td>
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-3">
                                                         <button

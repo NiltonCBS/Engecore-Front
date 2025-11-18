@@ -85,34 +85,35 @@ export default function ListarProdutosFornecedor() {
   }, []);
 
   // Busca produtos quando o fornecedor é selecionado
-  useEffect(() => {
+  const buscarProdutos = async () => {
     if (!selectedFornecedorId) {
       setProdutos([]); // Limpa a tabela se nenhum fornecedor for selecionado
       return;
     }
 
-    async function buscarProdutos() {
-      setLoadingProdutos(true);
-      setErro("");
-      try {
-        const response = await api.get(`/produtos-fornecedor/listar/${selectedFornecedorId}`);
-        if (response.data.success) {
-          const produtosMapeados = response.data.data.map(mapProduto);
-          setProdutos(produtosMapeados);
-          console.log("Produtos carregados:", produtosMapeados);
-        } else {
-          toast.error(response.data.message);
-          setProdutos([]);
-        }
-      } catch (error) {
-        console.error("Erro ao buscar produtos:", error);
-        setErro("Erro ao buscar produtos do fornecedor.");
+    setLoadingProdutos(true);
+    setErro("");
+    try {
+      const response = await api.get(`/produtos-fornecedor/listar/${selectedFornecedorId}`);
+      if (response.data.success) {
+        const produtosMapeados = response.data.data.map(mapProduto);
+        setProdutos(produtosMapeados);
+        console.log("Produtos carregados:", produtosMapeados);
+      } else {
+        toast.error(response.data.message);
         setProdutos([]);
-      } finally {
-        setLoadingProdutos(false);
       }
+    } catch (error) {
+      console.error("Erro ao buscar produtos:", error);
+      setErro("Erro ao buscar produtos do fornecedor.");
+      setProdutos([]);
+    } finally {
+      setLoadingProdutos(false);
     }
+  };
 
+  // 3. useEffect agora só chama a função
+  useEffect(() => {
     buscarProdutos();
   }, [selectedFornecedorId]);
 
@@ -138,6 +139,49 @@ export default function ListarProdutosFornecedor() {
     const currentId = selectedFornecedorId;
     setSelectedFornecedorId(""); // Limpa
     setTimeout(() => setSelectedFornecedorId(currentId), 100); // Recoloca
+  };
+
+  // Função de Deletar (NOVO)
+  const handleDeletar = (idProduto) => {
+    toast.warn(
+        ({ closeToast }) => (
+            <div>
+                <p className="font-semibold">Confirmar Exclusão</p>
+                <p className="text-sm">Tem certeza que deseja desvincular este produto do fornecedor?</p>
+                <div className="flex gap-2 mt-3">
+                    <button
+                        className="px-3 py-1 bg-red-600 text-white rounded text-sm"
+                        onClick={() => {
+                            _confirmarExclusao(idProduto);
+                            closeToast();
+                        }}
+                    >
+                        Sim, Excluir
+                    </button>
+                    <button
+                        className="px-3 py-1 bg-gray-200 text-gray-800 rounded text-sm"
+                        onClick={closeToast}
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+        ), { autoClose: false }
+    );
+  };
+
+  const _confirmarExclusao = async (idProduto) => {
+    try {
+        // Endpoint alterado para o correto de deleção
+        await api.delete(`/produtos-fornecedor/deletar/${idProduto}`);
+        
+        // Remove da lista local
+        setProdutos(prev => prev.filter(p => p.id !== idProduto));
+        toast.success("Produto desvinculado com sucesso!");
+    } catch (error) {
+        console.error("Erro ao excluir produto:", error);
+        toast.error(error.response?.data?.message || "Erro ao excluir produto.");
+    }
   };
 
 
@@ -231,14 +275,13 @@ export default function ListarProdutosFornecedor() {
                             >
                               <i className="fas fa-edit"></i>
                             </button>
-                            {/* Não há endpoint de delete no controller
                             <button
+                              onClick={() => handleDeletar(produto.id)}
                               className="text-red-600 hover:text-red-800"
                               title="Excluir"
                             >
                               <i className="fas fa-trash-alt"></i>
                             </button>
-                            */}
                           </div>
                         </td>
                       </tr>

@@ -90,7 +90,7 @@ export default function CadastrarInsumo() { // Renomeie o componente para clarez
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-1 bg-cordes-blue text-gray-700 font-semibold border..."
+                  className="flex-1 bg-blue-700 text-white font-semibold border..."
                 >
                   {loading ? "Salvando..." : "Cadastrar Insumo"}
                 </button>

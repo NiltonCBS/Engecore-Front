@@ -306,7 +306,7 @@ export default function ModalEditarMovimentacao({ movimentacao, onClose, onSave 
           <div className="flex gap-4 mt-6 pt-6 border-t">
             <button
               type="submit"
-              className="flex-1 bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg"
+              className="flex-1 bg-blue-700 text-white font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg"
             >
               <i className="fas fa-save mr-2"></i>
               Salvar Alterações

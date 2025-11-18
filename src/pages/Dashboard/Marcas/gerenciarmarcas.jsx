@@ -190,7 +190,7 @@ export default function GerenciarMarcas() {
               </div>
               <button
                 onClick={handleAbrirModalNovo}
-                className="bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg"
+                className="bg-blue-700 text-white font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg"
               >
                 <i className="fas fa-plus mr-2"></i>
                 Nova Marca

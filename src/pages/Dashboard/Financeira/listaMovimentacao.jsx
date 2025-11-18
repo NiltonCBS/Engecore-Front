@@ -1,90 +1,121 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../../../components/SideBar";
 import Header from "../../../components/Header";
-import ModalEditarMovimentacao from "./modalMovimentacao";
+import ModalEditarMovimentacao from "./modalMovimentacao"; 
 import { toast } from "react-toastify";
+import financeiroService from "../../../services/financeiroService";
+import { api } from "../../../services/api";
+
+const formatarMoeda = (valor) => {
+    if (typeof valor !== 'number') valor = Number(valor) || 0;
+    return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+};
 
 export default function ListarMovimentacoes() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filtroTipo, setFiltroTipo] = useState("");
-  const [filtroCategoria, setFiltroCategoria] = useState("");
+  const [movimentacoes, setMovimentacoes] = useState([]);
+  const [loading, setLoading] = useState(false);
+  
+  // 1. ALTERAÇÃO: Inicia com "TODOS" para listar tudo ao entrar
+  const [escopo, setEscopo] = useState("TODOS"); // TODOS, EMPRESA, OBRA, CLIENTE
+  const [idSelecionado, setIdSelecionado] = useState(""); 
+  
+  const [obrasLista, setObrasLista] = useState([]);
+  const [clientesLista, setClientesLista] = useState([]);
+
+  const [saldoAtual, setSaldoAtual] = useState(0);
+  const [totalReceitas, setTotalReceitas] = useState(0);
+  const [totalDespesas, setTotalDespesas] = useState(0);
+
   const [modalAberto, setModalAberto] = useState(false);
   const [movimentacaoSelecionada, setMovimentacaoSelecionada] = useState(null);
 
-  // Dados mockados para exemplo
-  const [movimentacoes, setMovimentacoes] = useState([
-    {
-      idMovFin: 1,
-      valor: 15000.00,
-      tipo: "Receita",
-      categoriaFinanceira: "Material de Construção",
-      obraRelacionada: "Edifício Residencial ABC",
-      funcionarioResponsavel: "João Silva",
-      data: "2024-10-01",
-      desc: "Venda de materiais excedentes",
-      clienteReferente: "João Silva"
-    },
-    {
-      idMovFin: 2,
-      valor: 8500.50,
-      tipo: "Despesa",
-      categoriaFinanceira: "Mão de Obra",
-      obraRelacionada: "Reforma Comercial XYZ",
-      funcionarioResponsavel: "Maria Santos",
-      data: "2024-10-05",
-      desc: "Pagamento equipe de pedreiros",
-      clienteReferente: "Maria Santos"
-    },
-    {
-      idMovFin: 3,
-      valor: 3200.00,
-      tipo: "Despesa",
-      categoriaFinanceira: "Equipamentos",
-      obraRelacionada: "Construção Galpão Industrial",
-      funcionarioResponsavel: "Pedro Oliveira",
-      data: "2024-10-08",
-      desc: "Aluguel de betoneira",
-      clienteReferente: "Construtora ABC Ltda"
-    },
-    {
-      idMovFin: 4,
-      valor: 25000.00,
-      tipo: "Receita",
-      categoriaFinanceira: "Serviços Terceirizados",
-      obraRelacionada: "Ampliação Residencial Silva",
-      funcionarioResponsavel: "Ana Costa",
-      data: "2024-10-10",
-      desc: "Recebimento parcela cliente",
-      clienteReferente: "Pedro Oliveira"
-    },
-    {
-      idMovFin: 5,
-      valor: 1200.00,
-      tipo: "Transferência",
-      categoriaFinanceira: "Administrativo",
-      obraRelacionada: "Obra Condomínio Premium",
-      funcionarioResponsavel: "Carlos Ferreira",
-      data: "2024-10-12",
-      desc: "Transferência entre contas",
-      clienteReferente: "Incorporadora XYZ S/A"
-    }
-  ]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filtroTipo, setFiltroTipo] = useState("");
 
-  const getTipoColor = (tipo) => {
-    switch(tipo) {
-      case 'Receita': return 'bg-green-100 text-green-800 border-green-200';
-      case 'Despesa': return 'bg-red-100 text-red-800 border-red-200';
-      case 'Transferência': return 'bg-blue-100 text-blue-800 border-blue-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  useEffect(() => {
+      async function loadResources() {
+          try {
+              const [obrasRes, clientesRes] = await Promise.all([
+                  api.get("/obras/listar"),
+                  api.get("/cliente/listar")
+              ]);
+              if (obrasRes.data.success) setObrasLista(obrasRes.data.data);
+              if (clientesRes.data.success) setClientesLista(clientesRes.data.data);
+          } catch (error) {
+              console.error("Erro ao carregar filtros:", error);
+          }
+      }
+      loadResources();
+  }, []);
+
+  useEffect(() => {
+      buscarDadosFinanceiros();
+  }, [escopo, idSelecionado]);
+
+  const buscarDadosFinanceiros = async () => {
+      setLoading(true);
+      setMovimentacoes([]);
+      setSaldoAtual(0);
+      
+      try {
+          let dados = [];
+          let saldo = 0;
+
+          // 2. ALTERAÇÃO: Lógica para buscar TODOS os registros
+          if (escopo === "TODOS") {
+              // Chama o endpoint de listagem geral (ajuste a rota se necessário, ex: /movFinanceiro)
+              const response = await api.get("/movFinanceira/listar"); 
+              if (response.data.success) {
+                  dados = response.data.data || [];
+                  
+                  // Calcula o saldo geral somando/subtraindo localmente
+                  saldo = dados.reduce((acc, curr) => {
+                      const val = Number(curr.valor) || 0;
+                      return curr.tipo === 'RECEITA' ? acc + val : acc - val;
+                  }, 0);
+              }
+          }
+          else if (escopo === "EMPRESA") {
+              dados = await financeiroService.listarMovimentacoesEmpresa();
+              saldo = await financeiroService.getSaldoEmpresa();
+          } 
+          else if (escopo === "OBRA") {
+              if (!idSelecionado) { setLoading(false); return; }
+              dados = await financeiroService.listarMovimentacoesObra(idSelecionado);
+              saldo = await financeiroService.getSaldoObra(idSelecionado);
+          }
+          else if (escopo === "CLIENTE") {
+             if (!idSelecionado) { setLoading(false); return; }
+             dados = await financeiroService.listarMovimentacoesCliente(idSelecionado);
+             saldo = await financeiroService.getSaldoCliente(idSelecionado);
+          }
+
+          setMovimentacoes(dados);
+          setSaldoAtual(saldo);
+
+          const receitas = dados.filter(m => m.tipo === 'RECEITA').reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
+          const despesas = dados.filter(m => m.tipo === 'DESPESA').reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
+          
+          setTotalReceitas(receitas);
+          setTotalDespesas(despesas);
+
+      } catch (error) {
+          console.error("Erro ao buscar dados financeiros:", error);
+          toast.error("Erro ao carregar dados financeiros.");
+      } finally {
+          setLoading(false);
+      }
   };
 
-  const getTipoIcon = (tipo) => {
-    switch(tipo) {
-      case 'Receita': return 'fa-arrow-up';
-      case 'Despesa': return 'fa-arrow-down';
-      case 'Transferência': return 'fa-exchange-alt';
-      default: return 'fa-dollar-sign';
+  const handleDeletar = async (id) => {
+    if (window.confirm("Tem certeza que deseja deletar esta movimentação?")) {
+      try {
+          await financeiroService.deletar(id);
+          toast.success("Movimentação deletada!");
+          buscarDadosFinanceiros();
+      } catch (error) {
+          toast.error("Erro ao deletar.");
+      }
     }
   };
 
@@ -93,47 +124,39 @@ export default function ListarMovimentacoes() {
     setModalAberto(true);
   };
 
-  const handleSalvarEdicao = (movimentacaoEditada) => {
-    setMovimentacoes(movimentacoes.map(m => 
-      m.idMovFin === movimentacaoEditada.idMovFin ? movimentacaoEditada : m
-    ));
-    setModalAberto(false);
-    toast.success("Movimentação atualizada com sucesso!");
+  const handleSalvarEdicao = async (movimentacaoEditada) => {
+      try {
+          const dto = {
+               valor: Number(movimentacaoEditada.valor),
+               tipo: movimentacaoEditada.tipo,
+               categoriaFinanceira: movimentacaoEditada.categoriaFinanceira,
+               dataMovimento: movimentacaoEditada.data,
+               descricao: movimentacaoEditada.desc,
+               funcionarioResponsavelId: movimentacaoEditada.funcionarioResponsavelId || null,
+               obraId: movimentacaoEditada.obraRelacionada ? Number(movimentacaoEditada.obraRelacionada) : null, 
+          };
+
+          const id = movimentacaoEditada.idMovFin || movimentacaoEditada.id;
+
+          await financeiroService.atualizar(id, dto);
+          setModalAberto(false);
+          toast.success("Movimentação atualizada!");
+          buscarDadosFinanceiros();
+      } catch (error) {
+          toast.error("Erro ao atualizar.");
+          console.error(error);
+      }
   };
 
-  const handleDeletar = (id) => {
-    if (window.confirm("Tem certeza que deseja deletar esta movimentação?")) {
-      setMovimentacoes(movimentacoes.filter(m => m.idMovFin !== id));
-      toast.success("Movimentação deletada com sucesso!");
-    }
-  };
-
-  const movimentacoesFiltradas = movimentacoes.filter(m => {
-    const matchSearch = 
-      m.desc.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.obraRelacionada.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.clienteReferente.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchTipo = !filtroTipo || m.tipo === filtroTipo;
-    const matchCategoria = !filtroCategoria || m.categoriaFinanceira === filtroCategoria;
-
-    return matchSearch && matchTipo && matchCategoria;
+  const dadosFiltrados = movimentacoes.filter(m => {
+      const termo = searchTerm.toLowerCase();
+      const matchSearch = 
+        (m.descricao && m.descricao.toLowerCase().includes(termo)) ||
+        (m.categoriaFinanceira && m.categoriaFinanceira.toLowerCase().includes(termo));
+      
+      const matchTipo = !filtroTipo || m.tipo === filtroTipo;
+      return matchSearch && matchTipo;
   });
-
-  const calcularTotais = () => {
-    const totais = movimentacoesFiltradas.reduce((acc, m) => {
-      if (m.tipo === 'Receita') acc.receitas += m.valor;
-      if (m.tipo === 'Despesa') acc.despesas += m.valor;
-      return acc;
-    }, { receitas: 0, despesas: 0 });
-
-    totais.saldo = totais.receitas - totais.despesas;
-    return totais;
-  };
-
-  const totais = calcularTotais();
-
-  const categorias = [...new Set(movimentacoes.map(m => m.categoriaFinanceira))];
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -142,181 +165,176 @@ export default function ListarMovimentacoes() {
         <Header />
         <div className="p-6">
           <div className="bg-white rounded-xl shadow-md p-8">
-            <div className="flex items-center justify-between mb-8">
+            
+            <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-bold text-cordes-blue">Movimentações Financeiras</h1>
-                <p className="text-gray-600 mt-2">Gerencie todas as movimentações financeiras</p>
+                <p className="text-gray-600 mt-2">Gestão de receitas, despesas e saldos</p>
               </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Total de Registros</div>
-                <div className="text-2xl font-bold text-cordes-blue">{movimentacoesFiltradas.length}</div>
+              
+              {/* 3. ALTERAÇÃO: Botão "Geral" adicionado */}
+              <div className="flex gap-4 bg-gray-100 p-2 rounded-lg">
+                  <button 
+                    onClick={() => { setEscopo("TODOS"); setIdSelecionado(""); }}
+                    className={`px-4 py-2 rounded-md font-medium transition ${escopo === "TODOS" ? "bg-white shadow text-cordes-blue" : "text-gray-600 hover:bg-gray-200"}`}
+                  >
+                    Geral
+                  </button>
+                  <button 
+                    onClick={() => { setEscopo("EMPRESA"); setIdSelecionado(""); }}
+                    className={`px-4 py-2 rounded-md font-medium transition ${escopo === "EMPRESA" ? "bg-white shadow text-cordes-blue" : "text-gray-600 hover:bg-gray-200"}`}
+                  >
+                    Empresa
+                  </button>
+                  <button 
+                    onClick={() => { setEscopo("OBRA"); setIdSelecionado(""); }}
+                    className={`px-4 py-2 rounded-md font-medium transition ${escopo === "OBRA" ? "bg-white shadow text-cordes-blue" : "text-gray-600 hover:bg-gray-200"}`}
+                  >
+                    Por Obra
+                  </button>
+                  <button 
+                    onClick={() => { setEscopo("CLIENTE"); setIdSelecionado(""); }}
+                    className={`px-4 py-2 rounded-md font-medium transition ${escopo === "CLIENTE" ? "bg-white shadow text-cordes-blue" : "text-gray-600 hover:bg-gray-200"}`}
+                  >
+                    Por Cliente
+                  </button>
               </div>
             </div>
 
-            {/* Cards de Resumo */}
+            {(escopo === "OBRA" || escopo === "CLIENTE") && (
+                <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                        Selecione {escopo === "OBRA" ? "a Obra" : "o Cliente"}:
+                    </label>
+                    <select 
+                        value={idSelecionado} 
+                        onChange={(e) => setIdSelecionado(e.target.value)}
+                        className="w-full md:w-1/2 p-2 border border-gray-300 rounded-md"
+                    >
+                        <option value="">-- Selecione --</option>
+                        {escopo === "OBRA" 
+                            ? obrasLista.map(o => <option key={o.idObra} value={o.idObra}>{o.nomeObra}</option>)
+                            : clientesLista.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)
+                        }
+                    </select>
+                </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
               <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-green-600 font-medium">Total Receitas</p>
-                    <p className="text-2xl font-bold text-green-700">
-                      R$ {totais.receitas.toFixed(2)}
-                    </p>
-                  </div>
-                  <i className="fas fa-arrow-up text-3xl text-green-600"></i>
-                </div>
+                <p className="text-sm text-green-600 font-medium">Receitas (Filtro)</p>
+                <p className="text-2xl font-bold text-green-700">{formatarMoeda(totalReceitas)}</p>
               </div>
 
               <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-red-600 font-medium">Total Despesas</p>
-                    <p className="text-2xl font-bold text-red-700">
-                      R$ {totais.despesas.toFixed(2)}
-                    </p>
-                  </div>
-                  <i className="fas fa-arrow-down text-3xl text-red-600"></i>
-                </div>
+                <p className="text-sm text-red-600 font-medium">Despesas (Filtro)</p>
+                <p className="text-2xl font-bold text-red-700">{formatarMoeda(totalDespesas)}</p>
               </div>
 
-              <div className={`${totais.saldo >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'} border rounded-lg p-4`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`text-sm font-medium ${totais.saldo >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>Saldo</p>
-                    <p className={`text-2xl font-bold ${totais.saldo >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
-                      R$ {totais.saldo.toFixed(2)}
-                    </p>
-                  </div>
-                  <i className={`fas fa-balance-scale text-3xl ${totais.saldo >= 0 ? 'text-blue-600' : 'text-orange-600'}`}></i>
-                </div>
+              <div className={`${saldoAtual >= 0 ? 'bg-blue-50 border-blue-200' : 'bg-orange-50 border-orange-200'} border rounded-lg p-4`}>
+                <p className={`text-sm font-medium ${saldoAtual >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+                    Saldo {escopo === 'TODOS' ? 'Geral' : (escopo === 'EMPRESA' ? 'da Empresa' : (escopo === 'OBRA' ? 'da Obra' : 'do Cliente'))}
+                </p>
+                <p className={`text-2xl font-bold ${saldoAtual >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                  {formatarMoeda(saldoAtual)}
+                </p>
               </div>
             </div>
 
-            {/* Filtros */}
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">Buscar</label>
-                  <div className="relative">
-                    <i className="fas fa-search absolute left-3 top-3 text-gray-400"></i>
-                    <input
-                      type="text"
-                      placeholder="Buscar por descrição, obra ou cliente..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg p-2 pl-10 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">Tipo</label>
-                  <select
-                    value={filtroTipo}
+            <div className="flex gap-4 mb-4">
+                <input
+                  type="text"
+                  placeholder="Buscar na lista..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="border p-2 rounded-md flex-1"
+                />
+                <select 
+                    value={filtroTipo} 
                     onChange={(e) => setFiltroTipo(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
-                  >
-                    <option value="">Todos os tipos</option>
-                    <option value="Receita">Receita</option>
-                    <option value="Despesa">Despesa</option>
-                    <option value="Transferência">Transferência</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-gray-700 font-medium mb-2">Categoria</label>
-                  <select
-                    value={filtroCategoria}
-                    onChange={(e) => setFiltroCategoria(e.target.value)}
-                    className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
-                  >
-                    <option value="">Todas as categorias</option>
-                    {categorias.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                    className="border p-2 rounded-md"
+                >
+                    <option value="">Todos os Tipos</option>
+                    <option value="RECEITA">Receitas</option>
+                    <option value="DESPESA">Despesas</option>
+                </select>
             </div>
 
-            {/* Tabela de Movimentações */}
+            {loading ? (
+                <div className="text-center py-10"><i className="fas fa-spinner fa-spin text-2xl"></i></div>
+            ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-100 border-b-2 border-gray-300">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">ID</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Data</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Tipo</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Valor</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Categoria</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Obra</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Cliente</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Categoria</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Descrição</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Valor</th>
                     <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {movimentacoesFiltradas.length === 0 ? (
-                    <tr>
-                      <td colSpan="8" className="px-4 py-8 text-center text-gray-500">
-                        <i className="fas fa-inbox text-4xl mb-2"></i>
-                        <p>Nenhuma movimentação encontrada</p>
-                      </td>
-                    </tr>
-                  ) : (
-                    movimentacoesFiltradas.map((movimentacao) => (
-                      <tr key={movimentacao.idMovFin} className="border-b border-gray-200 hover:bg-gray-50 transition">
-                        <td className="px-4 py-3 text-sm text-gray-700">#{movimentacao.idMovFin}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">
-                          {new Date(movimentacao.data).toLocaleDateString('pt-BR')}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getTipoColor(movimentacao.tipo)}`}>
-                            <i className={`fas ${getTipoIcon(movimentacao.tipo)}`}></i>
-                            {movimentacao.tipo}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-sm font-semibold text-gray-800">
-                          R$ {movimentacao.valor.toFixed(2)}
-                        </td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{movimentacao.categoriaFinanceira}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{movimentacao.obraRelacionada}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{movimentacao.clienteReferente}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleEditar(movimentacao)}
-                              className="text-blue-600 hover:text-blue-800 transition"
-                              title="Editar"
-                            >
-                              <i className="fas fa-edit text-lg"></i>
-                            </button>
-                            <button
-                              onClick={() => handleDeletar(movimentacao.idMovFin)}
-                              className="text-red-600 hover:text-red-800 transition"
-                              title="Deletar"
-                            >
-                              <i className="fas fa-trash text-lg"></i>
-                            </button>
-                            <button
-                              onClick={() => toast.info(`Detalhes da movimentação #${movimentacao.idMovFin}`)}
-                              className="text-gray-600 hover:text-gray-800 transition"
-                              title="Ver Detalhes"
-                            >
-                              <i className="fas fa-eye text-lg"></i>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                    {dadosFiltrados.length === 0 ? (
+                        <tr><td colSpan="6" className="text-center py-4 text-gray-500">Nenhum registro encontrado.</td></tr>
+                    ) : (
+                        dadosFiltrados.map((mov) => (
+                        <tr key={mov.id} className="border-b border-gray-200 hover:bg-gray-50 transition">
+                            <td className="px-4 py-3 text-sm text-gray-700">
+                            {new Date(mov.dataMovimento).toLocaleDateString('pt-BR')}
+                            </td>
+                            <td className="px-4 py-3">
+                            <span className={`px-2 py-1 rounded text-xs font-bold ${mov.tipo === 'RECEITA' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                {mov.tipo}
+                            </span>
+                            </td>
+                            {/* Exibindo Cliente se houver */}
+                            <td className="px-4 py-3 text-sm text-gray-700">
+                                {mov.cliente ? mov.cliente.nome : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{mov.categoriaFinanceira}</td>
+                            <td className="px-4 py-3 text-sm text-gray-700">{mov.descricao}</td>
+                            <td className="px-4 py-3 text-sm font-bold text-gray-800">
+                            {formatarMoeda(mov.valor)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                            <div className="flex justify-center gap-2">
+                                <button
+                                onClick={() => handleEditar({
+                                    idMovFin: mov.id,
+                                    valor: mov.valor,
+                                    tipo: mov.tipo === 'RECEITA' ? 'Receita' : 'Despesa',
+                                    categoriaFinanceira: mov.categoriaFinanceira,
+                                    data: mov.dataMovimento,
+                                    desc: mov.descricao,
+                                    funcionarioResponsavelId: mov.funcionarioResponsavel,
+                                    obraRelacionada: mov.obraId
+                                })}
+                                className="text-blue-600 hover:text-blue-800"
+                                >
+                                <i className="fas fa-edit"></i>
+                                </button>
+                                <button
+                                onClick={() => handleDeletar(mov.id)}
+                                className="text-red-600 hover:text-red-800"
+                                >
+                                <i className="fas fa-trash"></i>
+                                </button>
+                            </div>
+                            </td>
+                        </tr>
+                        ))
+                    )}
                 </tbody>
               </table>
             </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Modal de Edição */}
       {modalAberto && (
         <ModalEditarMovimentacao
           movimentacao={movimentacaoSelecionada}

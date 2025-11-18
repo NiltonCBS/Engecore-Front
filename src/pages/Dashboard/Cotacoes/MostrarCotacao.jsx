@@ -22,7 +22,7 @@ export default function MostrarCotacao() {
     useEffect(() => {
         if (!id) {
             toast.error("ID de cotação não fornecido.");
-            navigate("/cotacoes/listar"); // Navega para a lista
+            navigate("/cotacoes"); // Navega para a lista
             return;
         }
 
@@ -38,16 +38,16 @@ export default function MostrarCotacao() {
 
                     setCotacaoInfo(dadosCotacao);
                     setPropostas(propostasRecebidas);
-                    
+
                     // Lógica para selecionar o melhor preço (ou o confirmado) por padrão
-                    const propostaConfirmada = !dadosCotacao.status || dadosCotacao.status !== 'ABERTA' 
+                    const propostaConfirmada = !dadosCotacao.status || dadosCotacao.status !== 'ABERTA'
                         ? propostasRecebidas.find(p => p.id === fornecedorSelecionado) // Assume que 'fornecedorSelecionado' ID foi salvo
                         : null;
-                    
+
                     const melhorProposta = propostasRecebidas.find(p => p.melhorPreco);
 
                     if (propostaConfirmada) {
-                         setFornecedorSelecionado(propostaConfirmada.id);
+                        setFornecedorSelecionado(propostaConfirmada.id);
                     } else if (melhorProposta) {
                         setFornecedorSelecionado(melhorProposta.id);
                     } else if (propostasRecebidas.length > 0) {
@@ -60,7 +60,7 @@ export default function MostrarCotacao() {
             } catch (error) {
                 toast.error(`Erro ao carregar cotação: ${error.message}`);
                 console.error(error);
-                navigate("/cotacoes/listar"); 
+                navigate("/cotacoes");
             } finally {
                 setLoading(false);
             }
@@ -88,8 +88,8 @@ export default function MostrarCotacao() {
         try {
             await api.post(`/cotacoes/propostas/${fornecedorSelecionado}/confirmar`); //
             toast.success(`Pedido confirmado com fornecedor ${fornecedorAtivo.fornecedor}!`);
-            navigate('/cotacoes/listar'); // Volta para a lista
-            
+            navigate('/cotacoes'); // Volta para a lista
+
         } catch (error) {
             toast.error(error.response?.data?.message || "Erro ao confirmar pedido.");
             console.error(error);
@@ -107,7 +107,7 @@ export default function MostrarCotacao() {
                 const novasPropostas = response.data.data;
                 setPropostas(novasPropostas);
                 toast.success(`Propostas atualizadas! ${novasPropostas.length} fornecedores encontrados.`);
-                
+
                 // Re-seleciona o melhor
                 const melhorProposta = novasPropostas.find(p => p.melhorPreco);
                 if (melhorProposta) {
@@ -146,7 +146,7 @@ export default function MostrarCotacao() {
             link.setAttribute('download', `Cotacao_${id}.pdf`); // Nome do arquivo
             document.body.appendChild(link);
             link.click();
-            
+
             // Limpa o link da memória
             link.parentNode.removeChild(link);
             window.URL.revokeObjectURL(url);
@@ -190,9 +190,8 @@ export default function MostrarCotacao() {
                             <h2 className="text-3xl font-bold text-cordes-blue">
                                 Detalhes da Cotação #{cotacaoInfo?.id}
                             </h2>
-                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                                isAberta ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                            }`}>
+                            <span className={`px-3 py-1 text-xs font-semibold rounded-full ${isAberta ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                                }`}>
                                 {cotacaoInfo?.status}
                             </span>
                         </div>
@@ -255,6 +254,8 @@ export default function MostrarCotacao() {
                                         <thead className="bg-gray-100">
                                             <tr>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Fornecedor</th>
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Marca</th> {/* <-- NOVO */}
+                                                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Modelo</th> {/* <-- NOVO */}
                                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Valor Unit.</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Prazo</th>
                                                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Pagamento</th>
@@ -263,11 +264,9 @@ export default function MostrarCotacao() {
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
                                             {propostas.map((proposta) => (
-                                                <tr
-                                                    key={proposta.id}
-                                                    className={`border-b border-gray-100 transition-colors ${proposta.melhorPreco ? 'bg-green-50' : ''} ${isAberta ? 'cursor-pointer' : 'cursor-default'} ${proposta.melhorPreco && isAberta ? 'hover:bg-green-100' : (isAberta ? 'hover:bg-gray-50' : '')} ${fornecedorSelecionado === proposta.id ? 'border-l-4 border-cordes-blue' : ''}`}
-                                                    onClick={() => isAberta && setFornecedorSelecionado(proposta.id)}
-                                                >
+                                                <tr key={proposta.id} /* ... classes ... */ >
+
+                                                    {/* Célula de Fornecedor (Existente) */}
                                                     <td className="px-4 py-4">
                                                         <div className="flex items-center gap-2">
                                                             {proposta.melhorPreco && (<i className="fas fa-star text-green-600 text-sm"></i>)}
@@ -277,6 +276,18 @@ export default function MostrarCotacao() {
                                                             </div>
                                                         </div>
                                                     </td>
+
+                                                    {/* Célula de Marca (NOVO) */}
+                                                    <td className="px-4 py-4 text-sm text-gray-700">
+                                                        {proposta.marcaNome || '-'}
+                                                    </td>
+
+                                                    {/* Célula de Modelo (NOVO) */}
+                                                    <td className="px-4 py-4 text-sm text-gray-700">
+                                                        {proposta.modelo || '-'}
+                                                    </td>
+
+                                                    {/* Célula de Valor Unitário (Existente) */}
                                                     <td className={`px-4 py-4 text-sm ${proposta.melhorPreco ? 'font-bold text-green-700' : 'text-gray-700'}`}>
                                                         R$ {proposta.valorUnitario.toFixed(2).replace('.', ',')}
                                                     </td>
@@ -360,7 +371,7 @@ export default function MostrarCotacao() {
                                                 <div className="text-base font-medium text-gray-900">{fornecedorAtivo.condicaoPagamento || '-'}</div>
                                             </div>
                                         </div>
-                                        
+
                                         {/* Botões de Ação */}
                                         <div className='space-y-3 pt-4 border-t'>
                                             <button
@@ -372,7 +383,7 @@ export default function MostrarCotacao() {
                                                 <i className={`fas ${isConfirmando ? 'fa-spinner fa-spin' : 'fa-shopping-cart'}`}></i>
                                                 {isConfirmando ? 'Confirmando...' : 'Confirmar Pedido'}
                                             </button>
-                                            
+
                                             {/* BOTÃO DE EXPORTAR PDF */}
                                             <button
                                                 onClick={handleExportarPdf}

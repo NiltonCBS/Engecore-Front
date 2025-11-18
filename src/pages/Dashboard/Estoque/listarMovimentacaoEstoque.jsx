@@ -4,7 +4,7 @@ import { api } from '../../../services/api';
 import Sidebar from '../../../components/SideBar';
 import Header from '../../../components/Header';
 import ModalEditarMovEstoque from '../../../components/ModalEditarMovEstoque';
-import { NavLink } from 'react-router-dom'; // PASSO 1: Importar o NavLink
+import { NavLink } from 'react-router-dom';
 
 export default function ListarMovimentacaoEstoque() {
     const [movimentacoes, setMovimentacoes] = useState([]);
@@ -28,8 +28,6 @@ export default function ListarMovimentacaoEstoque() {
         try {
             const response = await api.get('/movEstoque/listar', { withCredentials: true });
 
-            console.log("Resposta da API:", response.data); // Debug
-
             let dados = response.data;
             
             if (response.data.success && response.data.data) {
@@ -37,19 +35,18 @@ export default function ListarMovimentacaoEstoque() {
             }
 
             if (!Array.isArray(dados)) {
-                console.error("Formato inesperado:", dados);
                 toast.error("Formato de dados inválido recebido da API");
                 return;
             }
 
-            // O mapeamento já parecia correto, assumindo que a API envia os nomes
             const movMapeados = dados.map(mov => ({
                 id: mov.id,
+                insumoId: mov.insumoId, // <--- ADICIONADO: Mapeia o ID do insumo vindo do backend
                 material: mov.material,
-                estoqueOrigem: mov.estoqueOrigem, // Assumindo que isto é o NOME (ex: "Almoxarifado")
-                estoqueDestino: mov.estoqueDestino, // Assumindo que isto é o NOME (ex: "Obra X")
-                nomeOrigem: mov.nomeOrigem, // Assumindo que isto é o NOME (ex: "Almoxarifado")
-                nomeDestino: mov.nomeDestino, // Assumindo que isto é o NOME (ex: "Obra X")
+                estoqueOrigem: mov.estoqueOrigem,
+                estoqueDestino: mov.estoqueDestino,
+                nomeOrigem: mov.nomeOrigem, 
+                nomeDestino: mov.nomeDestino, 
                 quantidade: mov.quantidade,
                 tipoMov: mov.tipoMov,
                 dataMovimentacao: mov.dataMovimentacao,
@@ -59,11 +56,8 @@ export default function ListarMovimentacaoEstoque() {
             }));
             
             setMovimentacoes(movMapeados);
-            // Removido o toast de sucesso daqui para não poluir a tela
-            // toast.success(`${movMapeados.length} movimentações carregadas`);
         } catch (error) {
             console.error("Erro ao buscar dados:", error);
-            console.error("Detalhes do erro:", error.response?.data);
             toast.error(error.response?.data?.message || "Falha ao buscar movimentações de estoque.");
         } finally {
             setIsLoading(false);
@@ -81,23 +75,24 @@ export default function ListarMovimentacaoEstoque() {
 
     const handleSalvarEdicao = async (movimentacaoEditada) => {
         try {
-            // ... (Lógica de salvar edição - sem alterações)
             const payload = {
                 tipoMov: movimentacaoEditada.tipoMov,
-                insumoId: movimentacaoEditada.insumoId,
-                estoqueOrigemId: movimentacaoEditada.estoqueOrigemId || null,
-                estoqueDestinoId: movimentacaoEditada.estoqueDestinoId,
+                insumoId: movimentacaoEditada.insumoId, // Agora este campo terá valor
+                estoqueOrigemId: movimentacaoEditada.estoqueOrigem || movimentacaoEditada.estoqueOrigemId || null, // Garante compatibilidade de nomes
+                estoqueDestinoId: movimentacaoEditada.estoqueDestino || movimentacaoEditada.estoqueDestinoId,
                 quantidade: movimentacaoEditada.quantidade,
                 valorUnitario: movimentacaoEditada.valorUnitario,
                 observacao: movimentacaoEditada.observacao,
                 dataMovimentacao: movimentacaoEditada.dataMovimentacao,
                 funcionarioId: movimentacaoEditada.funcionarioResponsavel
             };
+            
             const response = await api.put(
                 `/movEstoque/alterar/${movimentacaoEditada.id}`, 
                 payload,
                 { withCredentials: true }
             );
+            
             if (response.data) {
                 await fetchMovimentacoes(); 
                 toast.success("Movimentação atualizada com sucesso!");
@@ -112,7 +107,6 @@ export default function ListarMovimentacaoEstoque() {
     };
 
     const handleDeletar = (id) => {
-        // ... (Lógica de deletar - sem alterações)
         toast.info(
             <div>
                 <p>Tem certeza que deseja deletar esta movimentação?</p>
@@ -137,7 +131,6 @@ export default function ListarMovimentacaoEstoque() {
     };
 
     const confirmarDelecao = async (id) => {
-        // ... (Lógica de confirmar deleção - sem alterações)
         try {
             await api.delete(`/movEstoque/deletar/${id}`, { withCredentials: true });
             setMovimentacoes(movs => movs.filter(m => m.id !== id));
@@ -151,9 +144,7 @@ export default function ListarMovimentacaoEstoque() {
         }
     };
 
-    // Filtros (sem alterações)
     const movimentacoesFiltradas = movimentacoes.filter(m => {
-        // A API já deve trazer o NOME do material, então a busca funciona
         const matchSearch = m.material && m.material.toLowerCase().includes(searchTerm.toLowerCase());
         const matchTipo = !filtroTipo || m.tipoMov === filtroTipo;
         
@@ -173,22 +164,6 @@ export default function ListarMovimentacaoEstoque() {
         return matchSearch && matchTipo && matchData;
     });
 
-    // Totais (sem alterações)
-    const totais = movimentacoesFiltradas.reduce((acc, m) => {
-        const quantidade = Number(m.quantidade) || 0;
-        if (m.tipoMov === 'ENTRADA' || m.tipoMov === 'AJUSTE') {
-            acc.entradas += quantidade;
-        }
-        if (m.tipoMov === 'SAIDA') {
-            acc.saidas += quantidade;
-        }
-        if (m.tipoMov === 'TRANSFERENCIA') {
-            acc.transferencias += quantidade;
-        }
-        return acc;
-    }, { entradas: 0, saidas: 0, transferencias: 0 });
-
-    // Estilos (sem alterações)
     const getTipoBadgeStyle = (tipo) => {
         switch (tipo) {
             case 'ENTRADA': return 'bg-green-100 text-green-800 border-green-200';
@@ -200,7 +175,6 @@ export default function ListarMovimentacaoEstoque() {
     };
 
     const limparFiltros = () => {
-        // ... (sem alterações)
         setSearchTerm("");
         setFiltroTipo("");
         setFiltroDataInicio("");
@@ -214,7 +188,6 @@ export default function ListarMovimentacaoEstoque() {
                 <Header />
                 <div className="p-6">
                     <div className="bg-white rounded-xl shadow-md p-8">
-                        {/* Cabeçalho */}
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h1 className="text-3xl font-bold text-cordes-blue">
@@ -224,11 +197,9 @@ export default function ListarMovimentacaoEstoque() {
                                     Visualize e gerencie o fluxo de entrada e saída de insumos.
                                 </p>
                             </div>
-
-                            {/* --- PASSO 2: ADICIONAR O BOTÃO --- */}
                             <div className="flex flex-col items-end gap-2">
                                 <NavLink
-                                    to="/estoque/adicionar" // Rota para a página de cadastro
+                                    to="/estoque/adicionar"
                                     className="bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-2 px-4 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md"
                                 >
                                     <i className="fas fa-plus mr-2"></i>
@@ -241,42 +212,10 @@ export default function ListarMovimentacaoEstoque() {
                                     </div>
                                 </div>
                             </div>
-                            {/* --- FIM DA ADIÇÃO DO BOTÃO --- */}
-
                         </div>
 
-                        {/* Cards de Resumo (sem alterações) */}
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                            {/* ... (card entradas) ... */}
-                            <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-green-600 font-medium">Total de Entradas</p>
-                                    <p className="text-2xl font-bold text-green-700">{totais.entradas.toFixed(2)}</p>
-                                </div>
-                                <i className="fas fa-arrow-down text-3xl text-green-500"></i>
-                            </div>
-                            {/* ... (card saidas) ... */}
-                            <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-red-600 font-medium">Total de Saídas</p>
-                                    <p className="text-2xl font-bold text-red-700">{totais.saidas.toFixed(2)}</p>
-                                </div>
-                                <i className="fas fa-arrow-up text-3xl text-red-500"></i>
-                            </div>
-                            {/* ... (card transferencias) ... */}
-                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-sm text-blue-600 font-medium">Transferências</p>
-                                    <p className="text-2xl font-bold text-blue-700">{totais.transferencias.toFixed(2)}</p>
-                                </div>
-                                <i className="fas fa-exchange-alt text-3xl text-blue-500"></i>
-                            </div>
-                        </div>
-
-                        {/* Filtros Aprimorados (sem alterações) */}
                         <div className="bg-gray-50 p-4 rounded-lg mb-6">
-                            {/* ... (inputs e selects dos filtros) ... */}
-                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                 <div>
                                     <label className="block text-gray-700 font-medium mb-2">
                                         <i className="fas fa-search mr-2"></i>Buscar por Insumo
@@ -338,7 +277,6 @@ export default function ListarMovimentacaoEstoque() {
                             </div>
                         </div>
 
-                        {/* Tabela */}
                         <div className="overflow-x-auto">
                             <table className="w-full">
                                 <thead className="bg-gray-100 border-b-2 border-gray-300">
@@ -365,14 +303,6 @@ export default function ListarMovimentacaoEstoque() {
                                             <td colSpan="7" className="text-center py-10">
                                                 <i className="fas fa-inbox text-4xl text-gray-400 mb-2"></i>
                                                 <p className="text-gray-500">Nenhuma movimentação encontrada.</p>
-                                                {(searchTerm || filtroTipo || filtroDataInicio || filtroDataFim) && (
-                                                    <button 
-                                                        onClick={limparFiltros}
-                                                        className="text-cordes-blue hover:underline mt-2"
-                                                    >
-                                                        Limpar filtros
-                                                    </button>
-                                                )}
                                             </td>
                                         </tr>
                                     ) : (
@@ -382,7 +312,6 @@ export default function ListarMovimentacaoEstoque() {
                                                     {new Date(mov.dataMovimentacao).toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                                    {/* Exibe o nome do material (insumo) */}
                                                     {mov.material}
                                                 </td>
                                                 <td className="px-4 py-3">
@@ -393,18 +322,12 @@ export default function ListarMovimentacaoEstoque() {
                                                 <td className="px-4 py-3 text-center text-sm font-bold">
                                                     {Number(mov.quantidade).toFixed(2)}
                                                 </td>
-
-                                                {/* --- PASSO 3: CORRIGIR COLUNAS --- */}
                                                 <td className="px-4 py-3 text-sm">
-                                                    {/* Exibe o nome do estoque de origem */}
                                                     {mov.nomeOrigem || '-'}
                                                 </td>
                                                 <td className="px-4 py-3 text-sm">
-                                                    {/* Exibe o nome do estoque de destino */}
                                                     {mov.nomeDestino || '-'}
                                                 </td>
-                                                {/* --- FIM DA CORREÇÃO --- */}
-
                                                 <td className="px-4 py-3">
                                                     <div className="flex items-center justify-center gap-3">
                                                         <button 

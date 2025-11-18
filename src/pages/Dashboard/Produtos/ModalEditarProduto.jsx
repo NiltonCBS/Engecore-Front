@@ -136,7 +136,7 @@ export default function ModalEditarProduto({
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 hover:text-white transition disabled:opacity-50"
+                            className="flex-1 bg-blue-700 text-white font-semibold border border-gray-300 py-3 px-6 rounded-lg shadow-md hover:bg-blue-600 hover:text-white transition disabled:opacity-50"
                         >
                             {loading ? "Salvando..." : "Salvar Alterações"}
                         </button>

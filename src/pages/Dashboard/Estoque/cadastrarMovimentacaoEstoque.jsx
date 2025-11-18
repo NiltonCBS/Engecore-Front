@@ -110,7 +110,6 @@ export default function CadastrarMovimentacaoEstoque() {
         }
     }, [movimentacao.tipoMov, movimentacao.estoqueOrigemId]);
 
-    // --- handleChange ATUALIZADO ---
     const handleChange = (e) => {
         const { name, value } = e.target;
         let unit = ""; 
@@ -133,12 +132,12 @@ export default function CadastrarMovimentacaoEstoque() {
             setUnidadeSelecionada(""); 
         } else if (name === 'insumoId') {
             
-            // CORREÇÃO 1: 'AJUSTE' agora usa a mesma lógica de 'SAIDA'
             if (movimentacao.tipoMov === 'SAIDA' || movimentacao.tipoMov === 'TRANSFERENCIA' || movimentacao.tipoMov === 'AJUSTE') {
+                // Encontra o objeto completo do insumo na lista carregada do estoque
                 const info = insumosDisponiveis.find(i => i.insumoId == value);
                 setInsumoSelecionadoInfo(info || null);
                 if (info) unit = info.unidade;
-            } else { // 'else' agora é apenas 'ENTRADA'
+            } else { 
                 const infoMestre = insumosMestre.find(i => i.id == value);
                 setInsumoSelecionadoInfo(null);
                 if (infoMestre) unit = infoMestre.unidade;
@@ -158,14 +157,12 @@ export default function CadastrarMovimentacaoEstoque() {
         }));
     };
 
-    // --- validarCampos ATUALIZADO ---
     const validarCampos = () => {
         const { tipoMov, insumoId, quantidade, funcionarioId, estoqueOrigemId, estoqueDestinoId, materialEstoque } = movimentacao;
 
         if (!tipoMov) { toast.warn("Selecione o tipo de movimentação."); return false; }
         if (!insumoId) { toast.warn("Selecione um insumo."); return false; }
         
-        // Para AJUSTE, a quantidade pode ser negativa (ou positiva), então não validamos <= 0
         if (tipoMov !== 'AJUSTE' && (!quantidade || Number(quantidade) <= 0)) { 
             toast.warn("Informe uma quantidade válida."); return false; 
         }
@@ -181,12 +178,10 @@ export default function CadastrarMovimentacaoEstoque() {
             }
         }
 
-        // 'AJUSTE' agora entra nesta validação
         if (tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA' || tipoMov === 'AJUSTE') {
             if (!estoqueOrigemId) { toast.warn(`Selecione o estoque de ${tipoMov === 'AJUSTE' ? 'referência' : 'origem'}.`); return false; }
             if (!insumoSelecionadoInfo) { toast.warn("Insumo selecionado é inválido."); return false; }
             
-            // Validação de quantidade (NÃO se aplica a AJUSTE, pois é um valor de correção)
             if (tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA') {
                 if (Number(quantidade) > insumoSelecionadoInfo.quantidadeAtual) {
                     toast.warn(`Quantidade excede o estoque. Disponível: ${insumoSelecionadoInfo.quantidadeAtual} ${insumoSelecionadoInfo.unidade}`);
@@ -200,7 +195,6 @@ export default function CadastrarMovimentacaoEstoque() {
             }
         }
         
-        // CORREÇÃO 2: 'AJUSTE' foi REMOVIDO desta validação
         if (tipoMov === 'ENTRADA') {
             if (!estoqueDestinoId) { toast.warn(`Para ENTRADA, selecione o estoque de destino.`); return false; }
             if (!materialEstoque.valor || Number(materialEstoque.valor) <= 0) { toast.warn("Informe o valor unitário do material."); return false; }
@@ -214,7 +208,7 @@ export default function CadastrarMovimentacaoEstoque() {
         if (!validarCampos()) { return; }
         setIsLoading(true);
         try {
-            const { tipoMov } = movimentacao; // Pega o tipoMov para o if
+            const { tipoMov } = movimentacao;
             
             const dtoParaApi = {
                 tipoMov: movimentacao.tipoMov,
@@ -229,14 +223,35 @@ export default function CadastrarMovimentacaoEstoque() {
                 materialEstoque: null 
             };
             
-            // Se for SAIDA, AJUSTE ou TRANSFERENCIA, pega o valor unitário do insumo selecionado (se existir)
-            if (tipoMov === 'SAIDA' || tipoMov === 'TRANSFERENCIA' || tipoMov === 'AJUSTE') {
+            // --- LÓGICA CORRIGIDA PARA TRANSFERÊNCIA E SAÍDA ---
+            
+            // 1. Se for TRANSFERENCIA:
+            // Precisamos passar os dados do item de origem para o caso de precisar CRIAR o item no destino.
+            if (tipoMov === 'TRANSFERENCIA') {
+                if (insumoSelecionadoInfo) {
+                    // Valor unitário para registro histórico
+                    dtoParaApi.valorUnitario = Number(insumoSelecionadoInfo.valorUni);
+                    
+                    // Dados completos para criação do material no destino (se não existir)
+                    dtoParaApi.materialEstoque = {
+                        marcaId: Number(insumoSelecionadoInfo.marcaId), // ID da Marca é OBRIGATÓRIO
+                        modelo: insumoSelecionadoInfo.modelo || "",
+                        valor: Number(insumoSelecionadoInfo.valorUni), // Valor de Custo
+                        quantidadeMinima: Number(insumoSelecionadoInfo.quantidadeMinima) || 0,
+                        quantidadeMaxima: Number(insumoSelecionadoInfo.quantidadeMaxima) || 0
+                    };
+                }
+            }
+
+            // 2. Se for SAIDA ou AJUSTE:
+            // Apenas precisamos do valor unitário para o histórico financeiro
+            if (tipoMov === 'SAIDA' || tipoMov === 'AJUSTE') {
                 if (insumoSelecionadoInfo && insumoSelecionadoInfo.valor) {
                     dtoParaApi.valorUnitario = Number(insumoSelecionadoInfo.valor);
                 }
             }
             
-            // CORREÇÃO 3: 'AJUSTE' foi REMOVIDO daqui
+            // 3. Se for ENTRADA (Novo Item):
             if (movimentacao.tipoMov === 'ENTRADA') {
                 dtoParaApi.valorUnitario = Number(movimentacao.materialEstoque.valor);
                 dtoParaApi.materialEstoque = {
@@ -251,15 +266,19 @@ export default function CadastrarMovimentacaoEstoque() {
                 };
             }
 
-            // Para AJUSTE, o 'estoqueDestino' deve ser o mesmo que a 'origem' para o backend
+            // Ajuste especial para o backend (Ajuste geralmente ocorre no "destino" lógico ou na origem, depende da implementação)
+            // No seu caso, ajustamos a origem.
             if (movimentacao.tipoMov === 'AJUSTE') {
                 dtoParaApi.estoqueDestinoId = Number(movimentacao.estoqueOrigemId);
             }
             
+            console.log("FRONTEND: Enviando payload:", JSON.stringify(dtoParaApi, null, 2));
+
             await api.post('/movEstoque/cadastrar', dtoParaApi, { withCredentials: true });
             toast.success("Movimentação registrada com sucesso!");
             limparCampos();
         } catch (error) {
+            console.error(error);
             const mensagemErro = error.response?.data?.erro || error.response?.data?.message || "Erro ao registrar movimentação.";
             toast.error(mensagemErro, { autoClose: 5000 });
         } finally {
@@ -285,7 +304,6 @@ export default function CadastrarMovimentacaoEstoque() {
                 <Header />
                 <div className="p-6">
                     <div className="bg-white rounded-xl shadow-md p-8">
-                        {/* ... (Cabeçalho e Informativo) ... */}
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <h1 className="text-3xl font-bold text-cordes-blue">
@@ -326,10 +344,11 @@ export default function CadastrarMovimentacaoEstoque() {
                                         (movimentacao.tipoMov === 'SAIDA' || movimentacao.tipoMov === 'TRANSFERENCIA' || movimentacao.tipoMov === 'AJUSTE')
                                         ? insumosDisponiveis.map(i => ({ 
                                             id: i.insumoId, 
-                                            nomeCompleto: `${i.insumoNome} (${i.marcaNome || 'N/A'}) (Disponível: ${i.quantidadeAtual} ${i.unidade})`,
-                                            nome: i.insumoNome
+                                            // ATENÇÃO: Usando 'i.material' e 'i.marcaNome' conforme a atualização do Backend DTO
+                                            nomeCompleto: `${i.insumoNome} - ${i.marcaNome || 'S/ Marca'} (${i.modelo || ''}) - R$ ${i.valorUni} | Disp: ${i.quantidadeAtual} ${i.unidade}`,
+                                            nome: i.material
                                           }))
-                                        : insumosMestre // Apenas ENTRADA usa a lista mestra
+                                        : insumosMestre 
                                     }
                                     
                                     estoques={estoques}
@@ -339,7 +358,6 @@ export default function CadastrarMovimentacaoEstoque() {
                                 />
                             </FormSection>
 
-                            {/* CORREÇÃO 4: 'AJUSTE' foi REMOVIDO da condição de renderização */}
                             {(movimentacao.tipoMov === 'ENTRADA') && (
                                 <FormSection title="Detalhes do Material no Estoque (Novo Item)">
                                     <DetalhesMaterialEntrada

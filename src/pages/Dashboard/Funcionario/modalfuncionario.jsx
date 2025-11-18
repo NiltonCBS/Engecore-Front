@@ -85,6 +85,22 @@ export default function ModalEditarFuncionario({ funcionarioId, isOpen, onClose,
     return true;
   };
 
+     const capitalizar = (texto = "") => {
+    return texto
+      .toLowerCase()
+      .replace(/(?:^|\s)\S/g, (letra) => letra.toUpperCase());
+  };
+
+  const normalizarEmail = (email = "") => email.trim().toLowerCase();
+
+  const normalizarFuncionario = (c) => {
+  return {
+    ...c,
+    nome: capitalizar(c.nome),
+    razaoSocial: capitalizar(c.razaoSocial),
+    email: normalizarEmail(c.email)
+  };
+};
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validarFormulario()) return;
@@ -94,20 +110,21 @@ export default function ModalEditarFuncionario({ funcionarioId, isOpen, onClose,
 
     const cpfCnpjSemMascara = limparMascara(formData.cpfCnpj);
 
+    const formDataNormalizado = normalizarFuncionario(formData)
     // Monta o payload (FuncionarioDTO)
     let payload = {
-      nome: formData.nome,
-      email: formData.email,
+      nome: formDataNormalizado.nome,
+      email: formDataNormalizado.email,
       // CORREÇÃO: Envia a nova senha (ou nulo se estiver em branco)
       senha: novaSenha.trim() || null, 
-      telefone: formData.telefone,
-      status: formData.status,
-      role: formData.role,
-      tipoPessoa: formData.tipoPessoa === "Pessoa Física" ? "FISICA" : "JURIDICA",
+      telefone: formDataNormalizado.telefone,
+      status: formDataNormalizado.status,
+      role: formDataNormalizado.role,
+      tipoPessoa: formDataNormalizado.tipoPessoa === "Pessoa Física" ? "FISICA" : "JURIDICA",
       
-      cargo: formData.cargo,
-      salario: parseFloat(formData.salario) || 0,
-      dataAdmissao: formData.dataAdmissao,
+      cargo: formDataNormalizado.cargo,
+      salario: parseFloat(formDataNormalizado.salario) || 0,
+      dataAdmissao: formDataNormalizado.dataAdmissao,
 
       cpf: null, rg: null, dataNascimento: null,
       cnpj: null, razaoSocial: null, nomeFantasia: null, inscricaoEstadual: null

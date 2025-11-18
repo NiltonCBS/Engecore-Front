@@ -36,67 +36,71 @@ import GerenciarMarcas from './pages/Dashboard/Marcas/gerenciarmarcas.jsx';
 import RelatoriosPage from './pages/Dashboard/relatorios.jsx';
 
 import ListarFuncionarios from './pages/Dashboard/Funcionario/listarfuncionario.jsx';
-import CadastrarFuncionario from './pages/Dashboard/Funcionario/cadastrarcliente.jsx'; 
+import CadastrarFuncionario from './pages/Dashboard/Funcionario/cadastrarfuncionario.jsx'; 
 import CadastrarEstoque from './pages/Dashboard/Estoque/cadastrarEstoque.jsx';
 import ListarEstoque from './pages/Dashboard/Estoque/listaEstoque.jsx';
 import ListarProdutosPorEstoque from './pages/Dashboard/Estoque/listarProdutosPorEstoque.jsx';
 import GerenciarFases from './pages/Dashboard/Obras/gerenciarFases.jsx';
+import PrivateRoutes from "./components/PrivateRoutes";
 
 function App() {
 
 
   return (
-    <BrowserRouter>
-      <ToastContainer
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
+ <BrowserRouter>
+      <ToastContainer position="top-right" autoClose={3000} />
+      
       <Routes>
+        {/* --- ROTAS PÚBLICAS (Qualquer um pode acessar) --- */}
         <Route path="/" element={<SingIn />} />
         <Route path="/register" element={<SingUp />} />
-        <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* NOVA ROTA DE RELATÓRIOS */}
-        <Route path="/relatorios" element={<RelatoriosPage />} />
+        {/* --- ROTAS PROTEGIDAS (Precisa estar logado) --- */}
+        <Route element={<PrivateRoutes />}>
+            
+            <Route path="/dashboard" element={<Dashboard />} />
 
-        <Route path="/produtos/adicionar" element={<Produtos />} />
-        <Route path="/produtos/listar" element={<ListarProdutos />} />
-        <Route path="/produtos/estoque" element={<Estoque />} />
-        <Route path="/users/adicionar" element={<CadCliente />} />
-        <Route path="/users/listar" element={<ListarCliente />} />
-        <Route path="/funcionario/adicionar" element={<CadastrarFuncionario />} />
-        <Route path="/funcionario/listar" element={<ListarFuncionarios />} />
-        <Route path="/obras/adicionar" element={<CadastrarObra />} />
-        <Route path="/obras/listar" element={<ListarObra />} />
-        <Route path="/obras/fases" element={<GerenciarFases />} />
+            {/* Produtos */}
+            <Route path="/produtos/adicionar" element={<Produtos />} />
+            <Route path="/produtos/listar" element={<ListarProdutos />} />
+            <Route path="/produtos/estoque" element={<Estoque />} />
+            
+            {/* Clientes e Funcionários */}
+            <Route path="/users/adicionar" element={<CadCliente />} />
+            <Route path="/users/listar" element={<ListarCliente />} />
+            <Route path="/funcionario/adicionar" element={<CadastrarFuncionario />} />
+            <Route path="/funcionario/listar" element={<ListarFuncionarios />} />
+            
+            {/* Obras */}
+            <Route path="/obras/adicionar" element={<CadastrarObra />} />
+            <Route path="/obras/listar" element={<ListarObra />} />
+            <Route path="/obras/fases" element={<GerenciarFases />} />
 
-        {/* Rotas de Fornecedores */}
-        <Route path="/fornecedores/adicionar" element={<CadastrarFornecedor />} />
-        <Route path="/fornecedores/listar" element={<ListarFornecedores />} />
-        <Route path="/fornecedores/produtos/vincular" element={<CadastrarProdutoFornecedor />} />
-        <Route path="/fornecedores/produtos/listar" element={<ListarProdutosFornecedor />} />
+            {/* Fornecedores */}
+            <Route path="/fornecedores/adicionar" element={<CadastrarFornecedor />} />
+            <Route path="/fornecedores/listar" element={<ListarFornecedores />} />
+            <Route path="/fornecedores/produtos/vincular" element={<CadastrarProdutoFornecedor />} />
+            <Route path="/fornecedores/produtos/listar" element={<ListarProdutosFornecedor />} />
 
-        {/* Rota de Marcas */}
-        <Route path="/marcas" element={<GerenciarMarcas />} />
+            {/* Outros */}
+            <Route path="/marcas" element={<GerenciarMarcas />} />
+            <Route path="/financeiro/adicionar" element={<CadastrarMovimentacaoFinanceira />} />
+            <Route path="/financeiro/listar" element={<ListarMovimentacoesFinanceira />} />
+            
+            {/* Estoque */}
+            <Route path="/movimentacao/adicionar" element={<CadastrarMovimentacaoEstoque />} />
+            <Route path="/movimentacao/listar" element={<ListarMovimentacaoEstoque />} />
+            <Route path="/estoque/cadastrar" element={<CadastrarEstoque />} />
+            <Route path="/estoque/listar-estoques" element={<ListarEstoque />} />
+            <Route path="/estoque/produtos-por-estoque" element={<ListarProdutosPorEstoque />} />
+            
+            {/* Cotações e Relatórios */}
+            <Route path="/cotacoes" element={<ListarCotacoes />} />
+            <Route path="/cotacoes/nova" element={<CotacaoDeValores />} />
+            <Route path="/cotacoes/detalhes/:id" element={<MostrarCotacao />} />
+            <Route path="/relatorios" element={<RelatoriosPage />} />
 
-        <Route path="/financeiro/adicionar" element={<CadastrarMovimentacaoFinanceira />} />
-        <Route path="/financeiro/listar" element={<ListarMovimentacoesFinanceira />} />
-        <Route path="/estoque/adicionar" element={<CadastrarMovimentacaoEstoque />} />
-        <Route path="/estoque/listar" element={<ListarMovimentacaoEstoque />} />
-        <Route path="/estoque/cadastrar" element={<CadastrarEstoque />} />
-        <Route path="/estoque/listar-estoques" element={<ListarEstoque />} />
-        <Route path="/estoque/produtos-por-estoque" element={<ListarProdutosPorEstoque />} />
-        <Route path="/cotacoes" element={<ListarCotacoes />} />
-        <Route path="/cotacoes/nova" element={<CotacaoDeValores />} />
-        <Route path="/cotacoes/detalhes/:id" element={<MostrarCotacao />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   )

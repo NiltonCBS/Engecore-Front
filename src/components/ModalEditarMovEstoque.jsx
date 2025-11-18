@@ -55,7 +55,7 @@ export default function ModalEditarMovEstoque({ movimentacao, onClose, onSave })
                     <button onClick={onClose} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100">
                         Cancelar
                     </button>
-                    <button onClick={handleSubmit} className="px-6 py-2 bg-cordes-blue text-white rounded-lg hover:bg-blue-700">
+                    <button onClick={handleSubmit} className="px-6 py-2 bg-blue-700 text-white rounded-lg hover:bg-blue-600">
                         Salvar Alterações
                     </button>
                 </div>

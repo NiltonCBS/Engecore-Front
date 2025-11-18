@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../../../components/SideBar.jsx";
 import Header from "../../../components/Header.jsx";
 import FormSection from "../../../components/FormSection.jsx";
@@ -6,12 +6,37 @@ import ActionButtons from "../../../components/ActionButtons.jsx";
 import { toast } from 'react-toastify';
 import { api } from "../../../services/api.js";
 import { useNavigate } from "react-router-dom";
+import obrasService from "../../../services/obrasService.js";
 
 export default function CadastrarEstoque() {
     const [nome, setNome] = useState("");
-    const [localizacao, setLocalizacao] = useState("");
+    // Removido 'localizacao'
+    const [obraId, setObraId] = useState("");
+
+    // Estados para carregar a lista de obras
+    const [obras, setObras] = useState([]);
+    const [loadingData, setLoadingData] = useState(true);
+
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Carregar lista de obras ao montar
+    useEffect(() => {
+        const fetchObras = async () => {
+            setLoadingData(true);
+            try {
+                const data = await obrasService.listarObras();
+                // Mapeia para o formato de select { id, nome }
+                setObras(data.map(o => ({ id: o.idObra, nome: o.nomeObra })));
+            } catch (error) {
+                toast.error("Erro ao carregar lista de obras.");
+            } finally {
+                setLoadingData(false);
+            }
+        };
+        fetchObras();
+    }, []);
+
 
     const handleSubmit = async () => {
         if (!nome) {
@@ -19,17 +44,30 @@ export default function CadastrarEstoque() {
             return;
         }
 
+        const obraIdNumber = obraId ? Number(obraId) : null;
+
+        // Determina o tipo com base se a obra foi selecionada ou não.
+        // Se obraIdNumber for diferente de null, o tipo é OBRA, senão é EMPRESA.
+        const tipoEstoque = obraIdNumber ? "OBRA" : "EMPRESA";
+
         setLoading(true);
         try {
-            const payload = { nome, localizacao };
-            await api.post("/estoque/cadastrar", payload, { withCredentials: true });
+            const payload = {
+                nome,
+                estoqueMateriais: [],
+                obra: obraIdNumber,
+                tipo: tipoEstoque
+            };
             
+            console.log("Payload enviado:", payload);
+
+            await api.post("/estoque/cadastrar", payload, { withCredentials: true });
+
             toast.success("Estoque cadastrado com sucesso!");
             limparCampos();
-            navigate("/estoque/listar-estoques"); // Navega para a lista após o cadastro
+            navigate("/estoque/listar-estoques");
 
-        } catch (error)
-        {
+        } catch (error) {
             toast.error(error.response?.data?.message || "Erro ao cadastrar estoque.");
             console.error(error);
         } finally {
@@ -39,7 +77,7 @@ export default function CadastrarEstoque() {
 
     const limparCampos = () => {
         setNome("");
-        setLocalizacao("");
+        setObraId("");
     };
 
     return (
@@ -56,45 +94,77 @@ export default function CadastrarEstoque() {
                                     Cadastrar Novo Estoque
                                 </h1>
                                 <p className="text-gray-600 mt-2">
-                                    Crie um novo local de armazenamento (ex: Almoxarifado, Obra X).
+                                    Crie um novo local de armazenamento (Estoque de Obra ou da Empresa).
                                 </p>
                             </div>
                         </div>
 
-                        <div className="space-y-8">
-                            <FormSection title="Detalhes do Estoque">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div>
-                                        <label className="block text-gray-700 font-medium mb-2">Nome do Estoque *</label>
-                                        <input
-                                            type="text"
-                                            name="nome"
-                                            value={nome}
-                                            onChange={(e) => setNome(e.target.value)}
-                                            placeholder="Ex: Almoxarifado Central"
-                                            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-gray-700 font-medium mb-2">Localização</label>
-                                        <input
-                                            type="text"
-                                            name="localizacao"
-                                            value={localizacao}
-                                            onChange={(e) => setLocalizacao(e.target.value)}
-                                            placeholder="Ex: Galpão A, Prateleira 5"
-                                            className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
-                                        />
-                                    </div>
-                                </div>
-                            </FormSection>
+                        {/* Exibe carregamento de dados */}
+                        {loadingData && (
+                            <div className="text-center p-10">
+                                <i className="fas fa-spinner fa-spin text-4xl text-cordes-blue"></i>
+                                <p className="mt-2 text-gray-600">Carregando dados de obras...</p>
+                            </div>
+                        )}
 
-                            <ActionButtons
-                                onSave={handleSubmit}
-                                onClear={limparCampos}
-                                isLoading={loading}
-                            />
-                        </div>
+                        {!loadingData && (
+                            <div className="space-y-8">
+                                <FormSection title="Detalhes do Estoque">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        
+                                        {/* Nome do Estoque */}
+                                        <div>
+                                            <label className="block text-gray-700 font-medium mb-2">Nome do Estoque *</label>
+                                            <input
+                                                type="text"
+                                                name="nome"
+                                                value={nome}
+                                                onChange={(e) => setNome(e.target.value)}
+                                                placeholder="Ex: Almoxarifado Central"
+                                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
+                                            />
+                                        </div>
+                                        
+                                        {/* Tipo de Estoque (Automático) */}
+                                        <div className="w-full border border-gray-300 rounded-lg p-3 flex">
+                                            <i className={`fas ${obraId ? 'fa-building-columns text-green-600' : 'fa-industry text-blue-600'} mr-3`}></i>
+                                            <div>
+                                                <label className="block text-gray-700 font-medium text-sm">Tipo de Estoque</label>
+                                                <span className="font-bold text-gray-900">
+                                                    {obraId ? "OBRA" : "EMPRESA"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+
+                                        {/* Select para Obra Relacionada */}
+                                        <div className="md:col-span-2">
+                                            <label className="block text-gray-700 font-medium mb-2">Obra Relacionada</label>
+                                            <select
+                                                name="obraId"
+                                                value={obraId}
+                                                onChange={(e) => setObraId(e.target.value)}
+                                                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
+                                            >
+                                                <option value="">(Opcional) Estoque geral da empresa</option>
+                                                {obras.map(obra => (
+                                                    <option key={obra.id} value={obra.id}>{obra.nome}</option>
+                                                ))}
+                                            </select>
+                                            <p className="text-sm text-gray-500 mt-1">
+                                                Selecione uma obra para que o estoque seja do tipo **OBRA**. Se vazio, será do tipo **EMPRESA**.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </FormSection>
+
+                                <ActionButtons
+                                    onSave={handleSubmit}
+                                    onClear={limparCampos}
+                                    isLoading={loading}
+                                />
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

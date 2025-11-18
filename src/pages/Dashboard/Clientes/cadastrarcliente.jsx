@@ -47,32 +47,47 @@ export default function CadastrarCliente() {
 
     setCnpjLoading(true);
     try {
-      const response = await fetch(`https://minhareceita.org/${numeros}`);
-      
+      const response = await fetch(`https://publica.cnpj.ws/cnpj/${numeros}`);
+
       if (!response.ok) {
         throw new Error('CNPJ não encontrado ou API indisponível.');
       }
 
       const data = await response.json();
 
-      setCliente(prev => ({
+      // Dados principais
+      const empresa = data;
+      const est = data.estabelecimento;
+
+      // Telefone (a API separa ddd1 e telefone1)
+      const telefoneCompleto =
+        est.ddd1 && est.telefone1
+          ? formatarTelefone(`${est.ddd1}${est.telefone1}`)
+          : prev.telefone;
+
+      // CEP formatado
+      const cepFormatado = est.cep ? formatarCep(est.cep) : prev?.endereco?.cep;
+
+      setCliente((prev) => ({
         ...prev,
-        nome: data.nome_fantasia || "",
-        razaoSocial: data.razao_social || "",
-        email: data.email || prev.email, // Mantém o email digitado se a API não retornar
-        telefone: data.ddd_telefone_1 ? formatarTelefone(data.ddd_telefone_1) : prev.telefone, // Formata o telefone
+
+        nome: est.nome_fantasia || "",
+        razaoSocial: empresa.razao_social || "",
+        email: est.email || prev.email,
+
+        telefone: telefoneCompleto,
+
         endereco: {
           ...prev.endereco,
-          rua: data.logradouro || "",
-          numero: data.numero || "",
-          complemento: data.complemento || "",
-          bairro: data.bairro || "",
-          cidade: data.municipio || "",
-          estado: data.uf || "",
-          cep: formatarCep(data.cep || "")
-        }
+          rua: est.logradouro || "",
+          numero: est.numero || "",
+          complemento: est.complemento || "",
+          bairro: est.bairro || "",
+          cidade: est.cidade?.nome || "",
+          estado: est.estado?.sigla || "",
+          cep: cepFormatado || "",
+        },
       }));
-      toast.success("Dados do CNPJ preenchidos.");
 
       toast.success("Dados do CNPJ carregados com sucesso!");
     } catch (error) {
@@ -94,16 +109,16 @@ export default function CadastrarCliente() {
 
       if (data.erro) {
         toast.warn("CEP não encontrado");
-         // Limpa os campos se o CEP for inválido
-         setCliente(prev => ({
-            ...prev,
-            endereco: {
-                ...prev.endereco,
-                rua: "",
-                bairro: "",
-                cidade: "",
-                estado: "",
-            }
+        // Limpa os campos se o CEP for inválido
+        setCliente(prev => ({
+          ...prev,
+          endereco: {
+            ...prev.endereco,
+            rua: "",
+            bairro: "",
+            cidade: "",
+            estado: "",
+          }
         }));
         return;
       }
@@ -170,6 +185,29 @@ export default function CadastrarCliente() {
 
   const limparMascara = (valor) => (valor || "").replace(/\D/g, "");
 
+  const capitalizar = (texto = "") => {
+    return texto
+      .toLowerCase()
+      .replace(/(?:^|\s)\S/g, (letra) => letra.toUpperCase());
+  };
+
+  const normalizarEmail = (email = "") => email.trim().toLowerCase();
+
+  const normalizarCliente = (c) => {
+  return {
+    ...c,
+    nome: capitalizar(c.nome),
+    razaoSocial: capitalizar(c.razaoSocial),
+    email: normalizarEmail(c.email),
+    endereco: {
+      ...c.endereco,
+      rua: capitalizar(c.endereco.rua),
+      bairro: capitalizar(c.endereco.bairro),
+      cidade: capitalizar(c.endereco.cidade),
+      estado: c.endereco.estado?.toUpperCase(), // UF deve sempre ser maiúscula
+    }
+  };
+};
   const handleSubmit = async () => {
     setLoading(true);
     // Validações básicas primeiro
@@ -185,26 +223,29 @@ export default function CadastrarCliente() {
 
     // 2. Valida se tem pelo menos 8 dígitos
     if (cpfCnpjSemMascara.length < 8) {
-        toast.warn("O CPF/CNPJ deve ter pelo menos 8 dígitos para gerar a senha.");
-        setLoading(false);
-        return;
+      toast.warn("O CPF/CNPJ deve ter pelo menos 8 dígitos para gerar a senha.");
+      setLoading(false);
+      return;
     }
 
     // 3. Pega os 8 primeiros dígitos para a senha
     const senhaProvisoria = cpfCnpjSemMascara.substring(0, 8);
 
-    // Monta o payload
+    // Normalizar tudo
+    const clienteNormalizado = normalizarCliente(cliente);
+
+    // Agora usa clienteNormalizado em vez de cliente
     let payload = {
-      nome: cliente.nome,
-      email: cliente.email,
-      senha: senhaProvisoria, // ATUALIZADO: usa os 8 dígitos
-      telefone: cliente.telefone, // Mantém a máscara (Ex: (17) 99777-1234)
-      status: cliente.status === "ativo" ? "STATUS_ATIVO" : "STATUS_INATIVO",
-      role: "ROLE_CLIENTE", 
-      tipoPessoa: cliente.tipoCliente === "Pessoa Física" ? "FISICA" : "JURIDICA",
+      nome: clienteNormalizado.nome,
+      email: clienteNormalizado.email,
+      senha: senhaProvisoria,
+      telefone: clienteNormalizado.telefone,
+      status: clienteNormalizado.status === "ativo" ? "STATUS_ATIVO" : "STATUS_INATIVO",
+      role: "ROLE_CLIENTE",
+      tipoPessoa: clienteNormalizado.tipoCliente === "Pessoa Física" ? "FISICA" : "JURIDICA",
       endereco: {
-        ...cliente.endereco,
-        cep: cepSemMascara // Envia CEP sem máscara
+        ...clienteNormalizado.endereco,
+        cep: cepSemMascara
       }
     };
 
@@ -232,49 +273,49 @@ export default function CadastrarCliente() {
       toast.success("Cliente cadastrado com sucesso!");
       console.log("Resposta do servidor:", response.data);
       limparCampos();
-    
+
     } catch (error) {
       // --- INÍCIO DO TRATAMENTO DE ERRO DETALHADO ---
       console.error("Erro ao cadastrar cliente:", error.response?.data || error.message);
-      
+
       let erroMsg = "Erro desconhecido. Tente novamente.";
 
       if (error.response && error.response.data) {
-          // 'message' ou 'erro' (depende de como seu GlobalExceptionHandler está configurado)
-          erroMsg = error.response.data.message || error.response.data.erro || JSON.stringify(error.response.data);
+        // 'message' ou 'erro' (depende de como seu GlobalExceptionHandler está configurado)
+        erroMsg = error.response.data.message || error.response.data.erro || JSON.stringify(error.response.data);
       } else {
-          erroMsg = error.message;
+        erroMsg = error.message;
       }
 
       const erroMsgLower = erroMsg.toLowerCase();
 
       // Procura por "duplicate entry" (erro do MySQL) ou pelo nome da constraint
       if (erroMsgLower.includes("duplicate entry") || erroMsgLower.includes("constraintviolation")) {
-          
-          // Chave UK86phslelq64eeo6insr50y422 = telefone (conforme seu log)
-          if (erroMsgLower.includes("uk86phslelq64eeo6insr50y422") || erroMsg.includes(cliente.telefone)) {
-              toast.error("Erro: O Telefone '" + cliente.telefone + "' já está cadastrado.");
-          
+
+        // Chave UK86phslelq64eeo6insr50y422 = telefone (conforme seu log)
+        if (erroMsgLower.includes("uk86phslelq64eeo6insr50y422") || erroMsg.includes(cliente.telefone)) {
+          toast.error("Erro: O Telefone '" + cliente.telefone + "' já está cadastrado.");
+
           // Chave do email (geralmente tem 'email' no nome)
-          } else if (erroMsgLower.includes("email") || erroMsg.includes(cliente.email)) { 
-              toast.error("Erro: O E-mail '" + cliente.email + "' já está cadastrado.");
-          
+        } else if (erroMsgLower.includes("email") || erroMsg.includes(cliente.email)) {
+          toast.error("Erro: O E-mail '" + cliente.email + "' já está cadastrado.");
+
           // Chave do CPF/CNPJ (geralmente tem 'cpf' ou 'cnpj' no nome)
-          } else if (erroMsgLower.includes("cpf") || erroMsgLower.includes("cnpj") || erroMsg.includes(cliente.cpfCnpj)) {
-              toast.error("Erro: O CPF/CNPJ '" + cliente.cpfCnpj + "' já está cadastrado.");
-          
-          } else {
-              // Fallback se a mensagem não incluir o valor
-              toast.error("Erro de duplicidade: E-mail, Telefone ou CPF/CNPJ já cadastrado.");
-          }
+        } else if (erroMsgLower.includes("cpf") || erroMsgLower.includes("cnpj") || erroMsg.includes(cliente.cpfCnpj)) {
+          toast.error("Erro: O CPF/CNPJ '" + cliente.cpfCnpj + "' já está cadastrado.");
+
+        } else {
+          // Fallback se a mensagem não incluir o valor
+          toast.error("Erro de duplicidade: E-mail, Telefone ou CPF/CNPJ já cadastrado.");
+        }
 
       } else {
-          // Mostra a mensagem genérica se não for um erro de duplicidade
-          toast.error("Erro ao cadastrar: " + erroMsg);
+        // Mostra a mensagem genérica se não for um erro de duplicidade
+        toast.error("Erro ao cadastrar: " + erroMsg);
       }
       // --- FIM DO TRATAMENTO DE ERRO ---
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -311,7 +352,7 @@ export default function CadastrarCliente() {
 
   const formatarCpfCnpj = (valor) => {
     const numeros = valor.replace(/\D/g, '');
-    
+
     // Se for CPF (ou digitando)
     if (cliente.tipoCliente === "Pessoa Física") {
       return numeros
@@ -320,7 +361,7 @@ export default function CadastrarCliente() {
         .replace(/(\d{3})(\d)/, '$1.$2')
         .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
     }
-    
+
     // Se for CNPJ (ou tipo não selecionado)
     return numeros
       .slice(0, 14)
@@ -401,15 +442,15 @@ export default function CadastrarCliente() {
               </div>
               <div className="text-right">
                 <label className="block text-sm text-gray-500 mb-1">Status</label>
-                 <select
-                      name="status"
-                      value={cliente.status}
-                      onChange={handleChange}
-                      className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
-                    >
-                      <option value="ativo">Ativo</option>
-                      <option value="inativo">Inativo</option>
-                 </select>
+                <select
+                  name="status"
+                  value={cliente.status}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-cordes-blue"
+                >
+                  <option value="ativo">Ativo</option>
+                  <option value="inativo">Inativo</option>
+                </select>
               </div>
             </div>
 
@@ -432,7 +473,7 @@ export default function CadastrarCliente() {
                       ))}
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="block text-gray-700 font-medium mb-2">CPF/CNPJ *</label>
                     <div className="relative">
@@ -497,17 +538,7 @@ export default function CadastrarCliente() {
 
                   {cliente.tipoCliente === "Pessoa Física" && (
                     <>
-                      <div className="md:col-span-2">
-                        <label className="block text-gray-700 font-medium mb-2">Razão Social</label>
-                        <input
-                          type="text"
-                          name="razaoSocial"
-                          value={cliente.razaoSocial}
-                          onChange={handleChange}
-                          placeholder="Razão Social da empresa"
-                          className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-cordes-blue focus:border-transparent"
-                        />
-                      </div>
+                      {/* CAMPO RAZÃO SOCIAL REMOVIDO DAQUI */}
                       <div>
                         <label className="block text-gray-700 font-medium mb-2">RG</label>
                         <input
@@ -581,7 +612,7 @@ export default function CadastrarCliente() {
                         maxLength="9"
                         disabled={cepLoading}
                       />
-                       {cepLoading && (
+                      {cepLoading && (
                         <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                           <i className="fas fa-spinner fa-spin text-gray-500"></i>
                         </div>
@@ -675,7 +706,7 @@ export default function CadastrarCliente() {
                 <button
                   onClick={handleSubmit}
                   disabled={loading || cepLoading || cnpjLoading}
-                  className="flex-1 bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
+                  className="flex-1 bg-blue-700 text-white font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white transition duration-300 shadow-md hover:shadow-lg disabled:opacity-50"
                 >
                   {loading ? (
                     <><i className="fas fa-spinner fa-spin mr-2"></i>Cadastrando...</>

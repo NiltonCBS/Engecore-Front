@@ -1,21 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { toast } from 'react-toastify';
-
-// Mock da API para demonstração, já que o caminho do arquivo original não pôde ser resolvido.
-// Em um ambiente de produção real, você usaria a importação correta do seu arquivo de serviços.
-const api = {
-  put: (url, data) => {
-    console.log("--- MOCK API ---");
-    console.log(`PUT request para: ${url}`);
-    console.log("Payload:", data);
-    return new Promise((resolve) => {
-      // Simula uma resposta de sucesso da API após um pequeno atraso
-      setTimeout(() => {
-        resolve({ data: { success: true, message: "Cliente atualizado com sucesso!" } });
-      }, 1000);
-    });
-  }
-};
+import { api } from "../../../services/api.js";
 
 export default function ModalEditarCliente({ cliente, isOpen, onClose, onClienteAtualizado }) {
   const [formData, setFormData] = useState({
@@ -35,13 +20,24 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
       estado: "",
       cep: ""
     },
+    // Adicionado para compatibilidade com a nova função handleChange
+    dadosComerciais: {
+      limiteCredito: "",
+      prazoVencimento: "",
+      desconto: "",
+      vendedor: "",
+      observacoes: ""
+    },
     status: "ativo"
   });
 
   const [loading, setLoading] = useState(false);
   const [loadingCnpj, setLoadingCnpj] = useState(false);
+  const [cepLoading, setCepLoading] = useState(false); // Novo estado necessário para buscarCep
   const [erro, setErro] = useState("");
   const [erros, setErros] = useState({});
+   const [novaSenha, setNovaSenha] = useState(""); 
+    const [alterarSenhaChecked, setAlterarSenhaChecked] = useState(false);
 
   const tiposCliente = [
     "Pessoa Física",
@@ -55,11 +51,26 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
     "RS", "RO", "RR", "SC", "SP", "SE", "TO"
   ];
 
+  // --- Helpers necessários para as novas funções ---
+  const formatarTelefone = (valor) => {
+    const numeros = valor.replace(/\D/g, '');
+    if (numeros.length <= 10) { // Fixo
+      return numeros.slice(0, 10).replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{4})(\d)/, '$1-$2');
+    } else { // Celular
+      return numeros.slice(0, 11).replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d)/, '$1-$2');
+    }
+  };
+
+  const formatarCep = (valor) => {
+    if (!valor) return "";
+    const numeros = valor.replace(/\D/g, '');
+    return numeros.slice(0, 8).replace(/(\d{5})(\d{3})/, '$1-$2');
+  };
+  // ------------------------------------------------
+
   // Carregar dados do cliente quando o modal abrir
   useEffect(() => {
     if (isOpen && cliente) {
-      console.log("Cliente recebido no modal:", cliente);
-      
       setFormData({
         nome: cliente.nome || "",
         razaoSocial: cliente.razaoSocial || "",
@@ -77,114 +88,172 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
           estado: cliente.endereco?.estado || "",
           cep: cliente.endereco?.cep || ""
         },
+        dadosComerciais: cliente.dadosComerciais || {
+          limiteCredito: "",
+          prazoVencimento: "",
+          desconto: "",
+          vendedor: "",
+          observacoes: ""
+        },
         status: cliente.status || "ativo"
       });
       setErro("");
       setErros({});
-    } else if (isOpen && !cliente) {
-      console.error("Modal aberto sem cliente definido");
-      setErro("Erro: Cliente não encontrado. Feche o modal e tente novamente.");
     }
   }, [isOpen, cliente]);
 
+
+  // --- NOVAS FUNÇÕES INTEGRADAS (Adaptadas para usar setFormData) ---
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    
-    if (name.startsWith("endereco.")) {
-      const enderecoField = name.split(".")[1];
+
+    if (name.includes('endereco.')) {
+      // Suporta tanto "endereco.rua" quanto inputs que usam name="rua" mas lógica manual
+      const campo = name.includes('.') ? name.split('.')[1] : name; 
       setFormData(prev => ({
         ...prev,
         endereco: {
           ...prev.endereco,
-          [enderecoField]: value
+          [campo]: value
+        }
+      }));
+    } else if (name.includes('dadosComerciais.')) {
+      const campo = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        dadosComerciais: {
+          ...prev.dadosComerciais,
+          [campo]: value
         }
       }));
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
 
+    // Limpa erro do campo ao digitar
     if (erros[name]) {
       setErros(prev => ({ ...prev, [name]: "" }));
     }
   };
 
   const buscarCnpj = async (cnpj) => {
-    const cnpjLimpo = cnpj.replace(/\D/g, '');
-    if (cnpjLimpo.length !== 14) return;
+    const numeros = cnpj.replace(/\D/g, '');
+    if (numeros.length !== 14) return;
 
     setLoadingCnpj(true);
-    setErro("");
     try {
-      const response = await fetch(`https://minhareceita.org/${cnpjLimpo}`);
+      const response = await fetch(`https://publica.cnpj.ws/cnpj/${numeros}`);
+
       if (!response.ok) {
         throw new Error('CNPJ não encontrado ou API indisponível.');
       }
+
       const data = await response.json();
 
-      setFormData(prev => ({
+      // Dados principais
+      const empresa = data;
+      const est = data.estabelecimento;
+
+      // Telefone (a API separa ddd1 e telefone1)
+      const telefoneCompleto =
+        est.ddd1 && est.telefone1
+          ? formatarTelefone(`${est.ddd1}${est.telefone1}`)
+          : formData.telefone;
+
+      // CEP formatado
+      const cepFormatado = est.cep ? formatarCep(est.cep) : formData?.endereco?.cep;
+
+      setFormData((prev) => ({
         ...prev,
-        nome: data.nome_fantasia || prev.nome,
-        razaoSocial: data.razao_social || "",
-        email: data.email || prev.email,
+
+        nome: est.nome_fantasia || "",
+        razaoSocial: empresa.razao_social || "",
+        email: est.email || prev.email,
+
+        telefone: telefoneCompleto,
+
         endereco: {
           ...prev.endereco,
-          rua: data.logradouro || "",
-          numero: data.numero || "",
-          complemento: data.complemento || "",
-          bairro: data.bairro || "",
-          cidade: data.municipio || "",
-          estado: data.uf || "",
-          cep: (data.cep || "").replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2"),
-        }
+          rua: est.logradouro || "",
+          numero: est.numero || "",
+          complemento: est.complemento || "",
+          bairro: est.bairro || "",
+          cidade: est.cidade?.nome || "",
+          estado: est.estado?.sigla || "",
+          cep: cepFormatado || "",
+        },
       }));
 
+      toast.success("Dados do CNPJ carregados com sucesso!");
     } catch (error) {
       console.error("Erro ao buscar CNPJ:", error);
-      setErro("Erro ao consultar CNPJ. Verifique o número e tente novamente.");
+      toast.error("Erro ao consultar o CNPJ. Verifique o número e tente novamente.");
     } finally {
       setLoadingCnpj(false);
     }
   };
 
   const buscarCep = async (cep) => {
-    const cepLimpo = cep.replace(/\D/g, "");
-    if (cepLimpo.length !== 8) return;
-    
+    const numeros = cep.replace(/\D/g, '');
+    if (numeros.length !== 8) return;
+
+    setCepLoading(true);
     try {
-      const response = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`);
+      const response = await fetch(`https://viacep.com.br/ws/${numeros}/json/`);
       const data = await response.json();
-      
-      if (!data.erro) {
+
+      if (data.erro) {
+        toast.warn("CEP não encontrado");
+        // Limpa os campos se o CEP for inválido
         setFormData(prev => ({
           ...prev,
           endereco: {
             ...prev.endereco,
-            rua: data.logradouro || "",
-            bairro: data.bairro || "",
-            cidade: data.localidade || "",
-            estado: data.uf || ""
+            rua: "",
+            bairro: "",
+            cidade: "",
+            estado: "",
           }
         }));
+        return;
       }
+
+      setFormData(prev => ({
+        ...prev,
+        endereco: {
+          ...prev.endereco,
+          rua: data.logradouro || "",
+          bairro: data.bairro || "",
+          cidade: data.localidade || "",
+          estado: data.uf || "",
+          cep: formatarCep(data.cep || numeros)
+        }
+      }));
+      toast.success("Endereço preenchido.");
+      // Foca no campo "número" se existir
+      document.getElementsByName("endereco.numero")[0]?.focus();
     } catch (error) {
       console.error("Erro ao buscar CEP:", error);
+      toast.error("Erro ao buscar CEP. Tente novamente.");
+    } finally {
+      setCepLoading(false);
     }
   };
 
+  // --- FIM DAS NOVAS FUNÇÕES ---
+
   const handleCepChange = (e) => {
     const { value } = e.target;
-    const cepFormatado = value.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
+    const cepFormatado = formatarCep(value);
     
     setFormData(prev => ({
       ...prev,
       endereco: { ...prev.endereco, cep: cepFormatado }
     }));
 
-    if (cepFormatado.replace(/\D/g, '').length === 8) {
-      buscarCep(cepFormatado);
+    if (value.replace(/\D/g, '').length === 8) {
+      buscarCep(value);
     }
   };
 
@@ -235,7 +304,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
     return Object.keys(novosErros).length === 0;
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
     
     const clienteId = cliente?.id || cliente?.idUsuario;
@@ -274,6 +343,12 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
       nomeFantasia: null,
       inscricaoEstadual: null,
     };
+
+    // --- CORREÇÃO AQUI: Adiciona a senha se o checkbox estiver marcado ---
+    if (alterarSenhaChecked && novaSenha.trim()) {
+        dadosParaEnvio.senha = novaSenha.trim();
+    }
+    // ---------------------------------------------------------------------
 
     if (formData.tipoCliente === "Pessoa Física") {
       dadosParaEnvio.cpf = (formData.cpfCnpj || "").replace(/\D/g, "");
@@ -443,6 +518,40 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
                   <option value="inativo">Inativo</option>
                 </select>
               </div>
+              {/* CAMPO DE NOVA SENHA MODIFICADO */}
+                  <div className="md:col-span-2">
+                    {/* Checkbox para habilitar a alteração */}
+                    <div className="flex items-center mb-2">
+                      <input
+                        type="checkbox"
+                        id="alterarSenhaCheck"
+                        checked={alterarSenhaChecked}
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setAlterarSenhaChecked(isChecked);
+                          if (!isChecked) {
+                            setNovaSenha(""); // Limpa a senha se desmarcar
+                          }
+                        }}
+                        className="h-4 w-4 text-cordes-blue border-gray-300 rounded focus:ring-cordes-blue"
+                      />
+                      <label htmlFor="alterarSenhaCheck" className="ml-2 block text-sm font-medium text-gray-700">
+                        Alterar Senha
+                      </label>
+                    </div>
+
+                    {/* Input de Senha */}
+                    <input
+                      type="password"
+                      name="novaSenha"
+                      value={novaSenha}
+                      onChange={(e) => setNovaSenha(e.target.value)}
+                      placeholder="Digite a nova senha"
+                      className="w-full border border-gray-300 rounded-lg p-3 disabled:bg-gray-200 disabled:cursor-not-allowed"
+                      autoComplete="new-password"
+                      disabled={!alterarSenhaChecked} // Desabilitado se o checkbox não estiver marcado
+                    />
+                  </div>
             </div>
           </div>
 
@@ -459,7 +568,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
                   type="tel"
                   name="telefone"
                   value={formData.telefone}
-                  onChange={handleInputChange}
+                  onChange={handleInputChange} // Atualizado para usar a função correta que pode ter máscara se quiser, ou manter inputChange
                   className={`w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${erros.telefone ? 'border-red-500' : 'border-gray-300'}`}
                   placeholder="(00) 00000-0000"
                 />
@@ -490,15 +599,23 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">CEP</label>
-                <input
-                  type="text"
-                  name="endereco.cep"
-                  value={formData.endereco.cep}
-                  onChange={handleCepChange}
-                  maxLength={9}
-                  className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="00000-000"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    name="endereco.cep"
+                    value={formData.endereco.cep}
+                    onChange={handleCepChange}
+                    maxLength={9}
+                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="00000-000"
+                    disabled={cepLoading}
+                  />
+                  {cepLoading && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      <i className="fas fa-spinner fa-spin text-gray-500"></i>
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="md:col-span-2">
@@ -510,6 +627,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
                    onChange={handleInputChange}
                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                    placeholder="Nome da rua"
+                   disabled={cepLoading}
                  />
                </div>
 
@@ -546,6 +664,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
                    onChange={handleInputChange}
                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                    placeholder="Nome do bairro"
+                   disabled={cepLoading}
                  />
                </div>
 
@@ -558,6 +677,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
                    onChange={handleInputChange}
                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
                    placeholder="Nome da cidade"
+                   disabled={cepLoading}
                  />
                </div>
 
@@ -568,6 +688,7 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
                    value={formData.endereco.estado}
                    onChange={handleInputChange}
                    className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                   disabled={cepLoading}
                  >
                    <option value="">Selecione...</option>
                    {estados.map(estado => (
@@ -610,4 +731,3 @@ export default function ModalEditarCliente({ cliente, isOpen, onClose, onCliente
     </div>
   );
 }
-

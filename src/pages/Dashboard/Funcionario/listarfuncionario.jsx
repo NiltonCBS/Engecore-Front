@@ -225,7 +225,7 @@ export default function ListarFuncionarios() {
       </div>
     );
   }
-  // ... (renderização de erro)
+
 
   return (
     <div className="bg-gray-100 min-h-screen">
@@ -243,7 +243,7 @@ export default function ListarFuncionarios() {
                 </div>
                 <NavLink
                   to="/funcionario/adicionar"
-                  className="bg-cordes-blue text-gray-700 font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white"
+                  className="bg-blue-700 text-white font-semibold border border-gray-300 py-3 px-6 rounded-lg hover:bg-blue-gray-400 hover:text-white"
                 >
                   <i className="fas fa-plus mr-2"></i>
                   Novo Funcionário
